@@ -13,9 +13,11 @@ import java.awt.Component;
 import java.awt.Window;
 import java.io.File;
 import java.util.List;
+
 import javax.swing.JButton;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.weasis.core.api.gui.util.AbstractItemDialogPage;
@@ -36,9 +38,12 @@ public class ImportToolBar extends WtoolBar {
   public ImportToolBar(int index, DicomExplorer explorer) {
     super(Messages.getString("ImportToolBar.dcm_import_bar"), index);
     setAttachedInsertable(explorer);
-
+    
+	JButton button = new GammaViewConfig().getConfiguredToolButton();
+	if (button!=null)
+		add(button);
+    
     final DicomModel model = (DicomModel) explorer.getDataExplorerModel();
-
     if (BundleTools.SYSTEM_PREFERENCES.getBooleanProperty("weasis.import.dicom", true)) {
       final JButton btnImport = new JButton(ResourceUtil.getToolBarIcon(ActionIcon.IMPORT_DICOM));
       btnImport.setToolTipText(Messages.getString("ImportToolBar.import_dcm"));
@@ -55,6 +60,7 @@ public class ImportToolBar extends WtoolBar {
                   ImportToolBar.this, model, Messages.getString("DicomExplorer.dcmCD")));
       add(btnImport);
     }
+    
   }
 
   public static void openImportDicomCdAction(
