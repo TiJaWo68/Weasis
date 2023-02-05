@@ -131,6 +131,7 @@ import org.weasis.dicom.codec.geometry.IntersectVolume;
 import org.weasis.dicom.codec.geometry.LocalizerPoster;
 import org.weasis.dicom.explorer.DicomExplorer;
 import org.weasis.dicom.explorer.DicomModel;
+import org.weasis.dicom.explorer.GammaViewConfig;
 import org.weasis.dicom.explorer.HangingProtocols.OpeningViewer;
 import org.weasis.dicom.explorer.LoadLocalDicom;
 import org.weasis.dicom.explorer.LocalImport;
@@ -223,7 +224,7 @@ public class View2d extends DefaultView2d<DicomImageElement> {
   @Override
   protected void initActionWState() {
     super.initActionWState();
-    actionsInView.put(ActionW.SORT_STACK.cmd(), SortSeriesStack.instanceNumber);
+	actionsInView.put(ActionW.SORT_STACK.cmd(), GammaViewConfig.getInstance().getDefaultSeriesComparator(series));
 
     // Preprocessing
     actionsInView.put(ActionW.CROP.cmd(), null);
