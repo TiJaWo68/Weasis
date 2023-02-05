@@ -39,7 +39,7 @@ public class ImportToolBar extends WtoolBar {
     super(Messages.getString("ImportToolBar.dcm_import_bar"), index);
     setAttachedInsertable(explorer);
     
-	JButton button = new GammaViewConfig().getConfiguredToolButton();
+	JButton button = GammaViewConfig.getInstance().getConfiguredToolButton();
 	if (button!=null)
 		add(button);
     
