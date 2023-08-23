@@ -1,0 +1,12 @@
+<svg width="64" height="64" xmlns="http://www.w3.org/2000/svg">
+ <title>VHS</title>
+
+ <g>
+  <title>Layer 1</title>
+  <g id="svg_29">
+   <ellipse ry="11.875" rx="12.125" id="svg_26" cy="24.575" cx="33.625" stroke="#6e6e6e" fill="none"/>
+   <line stroke-linecap="undefined" stroke-linejoin="undefined" id="svg_27" y2="32.45" x2="50.75" y1="15.2" x1="15" stroke="#6e6e6e" fill="none"/>
+   <line stroke-linecap="undefined" stroke-linejoin="undefined" id="svg_28" y2="61.7" x2="15.25" y1="3.45" x1="44.75" stroke="#6e6e6e" fill="none"/>
+  </g>
+ </g>
+</svg>

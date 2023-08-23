@@ -50,6 +50,9 @@ import org.weasis.core.ui.model.graphic.imp.line.LineGraphic;
 import org.weasis.core.ui.model.graphic.imp.line.ParallelLineGraphic;
 import org.weasis.core.ui.model.graphic.imp.line.PerpendicularLineGraphic;
 import org.weasis.core.ui.model.graphic.imp.line.PolylineGraphic;
+import org.weasis.core.ui.model.graphic.imp.vet.HipDysplasia;
+import org.weasis.core.ui.model.graphic.imp.vet.TibialPlateauLevelingOsteotomy;
+import org.weasis.core.ui.model.graphic.imp.vet.VertebralHeartScore;
 import org.weasis.core.ui.model.layer.LayerType;
 import org.weasis.core.ui.pref.ViewSetting;
 import org.weasis.core.ui.util.WtoolBar;
@@ -105,6 +108,15 @@ public class MeasureToolBar extends WtoolBar {
     if (p.getBooleanProperty("weasis.measure.pixelinfo", true)) {
       measureGraphicList.add(new PixelInfoGraphic());
     }
+	if (p.getBooleanProperty("weasis.measure.pixelinfo", true)) {
+		measureGraphicList.add(new HipDysplasia());
+	}
+	if (p.getBooleanProperty("weasis.measure.pixelinfo", true)) {
+		measureGraphicList.add(new VertebralHeartScore());
+	}
+	if (p.getBooleanProperty("weasis.measure.pixelinfo", true)) {
+		measureGraphicList.add(new TibialPlateauLevelingOsteotomy());
+	}
     measureGraphicList.forEach(g -> g.setLayerType(LayerType.MEASURE));
 
     if (p.getBooleanProperty("weasis.draw.selection", true)) {
