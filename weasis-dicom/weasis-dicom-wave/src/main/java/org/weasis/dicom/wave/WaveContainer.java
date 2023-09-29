@@ -36,17 +36,17 @@ import org.slf4j.LoggerFactory;
 import org.weasis.core.api.explorer.ObservableEvent;
 import org.weasis.core.api.gui.InsertableUtil;
 import org.weasis.core.api.gui.util.GuiExecutor;
+import org.weasis.core.api.gui.util.GuiUtils;
 import org.weasis.core.api.image.GridBagLayoutModel;
 import org.weasis.core.api.media.data.MediaSeries;
 import org.weasis.core.api.media.data.MediaSeriesGroup;
 import org.weasis.core.api.media.data.Series;
-import org.weasis.core.api.service.BundleTools;
+import org.weasis.core.api.service.WProperties;
 import org.weasis.core.api.util.ResourceUtil;
 import org.weasis.core.api.util.ResourceUtil.ActionIcon;
 import org.weasis.core.api.util.ResourceUtil.FileIcon;
 import org.weasis.core.ui.docking.DockableTool;
 import org.weasis.core.ui.docking.PluginTool;
-import org.weasis.core.ui.docking.UIManager;
 import org.weasis.core.ui.editor.SeriesViewerListener;
 import org.weasis.core.ui.editor.image.DefaultView2d;
 import org.weasis.core.ui.editor.image.ImageViewerEventManager;
@@ -88,8 +88,9 @@ public class WaveContainer extends DicomViewerPlugin implements PropertyChangeLi
   // Do not initialize tools in a static block (order initialization issue with eventManager), use
   // instead a lazy
   // initialization with a method.
-  public static final List<Toolbar> TOOLBARS = Collections.synchronizedList(new ArrayList<>(1));
-  public static final List<DockableTool> TOOLS = Collections.synchronizedList(new ArrayList<>(1));
+  protected static final List<Toolbar> TOOLBARS = Collections.synchronizedList(new ArrayList<>(1));
+  protected static final List<DockableTool> TOOLS =
+      Collections.synchronizedList(new ArrayList<>(1));
   private static volatile boolean initComponents = false;
   static final ImageViewerEventManager<DicomImageElement> ECG_EVENT_MANAGER =
       new ImageViewerEventManager<>() {
@@ -148,36 +149,37 @@ public class WaveContainer extends DicomViewerPlugin implements PropertyChangeLi
       String bundleName = context.getBundle().getSymbolicName();
       String componentName = InsertableUtil.getCName(this.getClass());
       String key = "enable"; // NON-NLS
+      WProperties preferences = GuiUtils.getUICore().getSystemPreferences();
 
       if (InsertableUtil.getBooleanProperty(
-          BundleTools.SYSTEM_PREFERENCES,
+          preferences,
           bundleName,
           componentName,
           InsertableUtil.getCName(ImportToolBar.class),
           key,
           true)) {
         Optional<Toolbar> b =
-            UIManager.EXPLORER_PLUGIN_TOOLBARS.stream()
+            GuiUtils.getUICore().getExplorerPluginToolbars().stream()
                 .filter(ImportToolBar.class::isInstance)
                 .findFirst();
         b.ifPresent(TOOLBARS::add);
       }
       if (InsertableUtil.getBooleanProperty(
-          BundleTools.SYSTEM_PREFERENCES,
+          preferences,
           bundleName,
           componentName,
           InsertableUtil.getCName(ExportToolBar.class),
           key,
           true)) {
         Optional<Toolbar> b =
-            UIManager.EXPLORER_PLUGIN_TOOLBARS.stream()
+            GuiUtils.getUICore().getExplorerPluginToolbars().stream()
                 .filter(ExportToolBar.class::isInstance)
                 .findFirst();
         b.ifPresent(TOOLBARS::add);
       }
 
       if (InsertableUtil.getBooleanProperty(
-          BundleTools.SYSTEM_PREFERENCES,
+          preferences,
           bundleName,
           componentName,
           InsertableUtil.getCName(WaveformToolBar.class),
@@ -188,7 +190,7 @@ public class WaveContainer extends DicomViewerPlugin implements PropertyChangeLi
 
       PluginTool tool;
       if (InsertableUtil.getBooleanProperty(
-          BundleTools.SYSTEM_PREFERENCES,
+          preferences,
           bundleName,
           componentName,
           InsertableUtil.getCName(MeasureTool.class),
@@ -334,7 +336,7 @@ public class WaveContainer extends DicomViewerPlugin implements PropertyChangeLi
   }
 
   @Override
-  public synchronized List<Toolbar> getToolBar() {
+  public synchronized List<Toolbar> getToolBars() {
     return TOOLBARS;
   }
 
