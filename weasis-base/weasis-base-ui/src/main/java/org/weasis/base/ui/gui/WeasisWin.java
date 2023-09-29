@@ -17,10 +17,12 @@ import bibliothek.extension.gui.dock.theme.eclipse.EclipseTabStateInfo;
 import bibliothek.gui.dock.ScreenDockStation;
 import bibliothek.gui.dock.common.CControl;
 import bibliothek.gui.dock.common.CLocation;
+import bibliothek.gui.dock.common.CWorkingArea;
 import bibliothek.gui.dock.common.DefaultSingleCDockable;
 import bibliothek.gui.dock.common.action.CAction;
 import bibliothek.gui.dock.common.action.predefined.CCloseAction;
 import bibliothek.gui.dock.common.event.CFocusListener;
+import bibliothek.gui.dock.common.event.CVetoFocusListener;
 import bibliothek.gui.dock.common.intern.CDockable;
 import bibliothek.gui.dock.common.mode.ExtendedMode;
 import bibliothek.gui.dock.common.theme.ThemeMap;
@@ -121,12 +123,12 @@ import org.weasis.core.api.media.data.MediaSeries;
 import org.weasis.core.api.media.data.MediaSeriesGroup;
 import org.weasis.core.api.media.data.Series;
 import org.weasis.core.api.media.data.TagW;
-import org.weasis.core.api.service.BundleTools;
+import org.weasis.core.api.service.UICore;
+import org.weasis.core.api.service.WProperties;
 import org.weasis.core.api.util.ResourceUtil;
 import org.weasis.core.api.util.ResourceUtil.ActionIcon;
 import org.weasis.core.api.util.ResourceUtil.LogoIcon;
 import org.weasis.core.ui.docking.DockableTool;
-import org.weasis.core.ui.docking.UIManager;
 import org.weasis.core.ui.editor.MimeSystemAppViewer;
 import org.weasis.core.ui.editor.SeriesViewer;
 import org.weasis.core.ui.editor.SeriesViewerFactory;
@@ -211,16 +213,22 @@ public class WeasisWin {
         new WindowAdapter() {
           @Override
           public void windowClosing(WindowEvent e) {
-            closeWindow();
+            if (canBeClosed()) {
+              closeAllRunnable();
+            }
           }
         });
     rootPaneContainer = jFrame;
 
-    if (BundleTools.SYSTEM_PREFERENCES.getBooleanProperty("weasis.menu.menubar", true)) {
+    if (GuiUtils.getUICore()
+        .getSystemPreferences()
+        .getBooleanProperty("weasis.menu.menubar", true)) {
       rootPaneContainer.getRootPane().setJMenuBar(createMenuBar());
     }
     setSelectedPlugin(null);
-    rootPaneContainer.getContentPane().add(UIManager.toolbarContainer, BorderLayout.NORTH);
+    rootPaneContainer
+        .getContentPane()
+        .add(GuiUtils.getUICore().getToolbarContainer(), BorderLayout.NORTH);
 
     rootPaneContainer.setGlassPane(AppProperties.glassPane);
 
@@ -259,33 +267,28 @@ public class WeasisWin {
   }
 
   public ToolBarContainer getToolbarContainer() {
-    return UIManager.toolbarContainer;
+    return GuiUtils.getUICore().getToolbarContainer();
   }
 
-  public boolean closeWindow() {
-    boolean busy = false;
-    if (!busy) {
-      if (BundleTools.SYSTEM_PREFERENCES.getBooleanProperty(BundleTools.CONFIRM_CLOSE, false)) {
-        int option = JOptionPane.showConfirmDialog(frame, Messages.getString("WeasisWin.exit_mes"));
-        if (option == JOptionPane.YES_OPTION) {
-          closeAllRunnable();
-          return true;
-        }
-      } else {
-        closeAllRunnable();
-        return true;
-      }
+  public boolean canBeClosed() {
+    if (GuiUtils.getUICore()
+        .getSystemPreferences()
+        .getBooleanProperty(UICore.CONFIRM_CLOSE, false)) {
+      int option = JOptionPane.showConfirmDialog(frame, Messages.getString("WeasisWin.exit_mes"));
+      return option == JOptionPane.YES_OPTION;
+    } else {
+      return true;
     }
-    return false;
   }
 
-  private void closeAllRunnable() {
-    BundleTools.LOCAL_UI_PERSISTENCE.putIntProperty("last.window.state", frame.getExtendedState());
+  void closeAllRunnable() {
+    WProperties localPersistence = GuiUtils.getUICore().getLocalPersistence();
+    localPersistence.putIntProperty("last.window.state", frame.getExtendedState());
     Rectangle rect = frame.getBounds();
-    BundleTools.LOCAL_UI_PERSISTENCE.putIntProperty("last.window.x", rect.x);
-    BundleTools.LOCAL_UI_PERSISTENCE.putIntProperty("last.window.y", rect.y);
-    BundleTools.LOCAL_UI_PERSISTENCE.putIntProperty("last.window.width", rect.width);
-    BundleTools.LOCAL_UI_PERSISTENCE.putIntProperty("last.window.height", rect.height);
+    localPersistence.putIntProperty("last.window.x", rect.x);
+    localPersistence.putIntProperty("last.window.y", rect.y);
+    localPersistence.putIntProperty("last.window.width", rect.width);
+    localPersistence.putIntProperty("last.window.height", rect.height);
     for (Runnable onClose : runOnClose) {
       onClose.run();
     }
@@ -306,7 +309,7 @@ public class WeasisWin {
     if (System.getProperty("maven.localRepository") == null) {
       DockUtilities.disableCheckLayoutLocked();
     }
-    CControl control = UIManager.DOCKING_CONTROL;
+    CControl control = GuiUtils.getUICore().getDockingControl();
     control.setRootWindow(new DirectWindowProvider(frame));
     destroyOnClose(control);
     ThemeMap themes = control.getThemes();
@@ -315,23 +318,19 @@ public class WeasisWin {
     control.putProperty(ScreenDockStation.BOUNDARY_RESTRICTION, BoundaryRestriction.HARD);
     control.putProperty(EclipseTheme.THEME_CONNECTOR, new HidingEclipseThemeConnector(control));
 
-    // control.setGroupBehavior(CGroupBehavior.TOPMOST);
-    // control.setDefaultLocation(centerArea.getStationLocation());
-
     control.addFocusListener(selectionListener);
 
-    // control.setDefaultLocation(UIManager.BASE_AREA.
-    // this.add(UIManager.EAST_AREA, BorderLayout.EAST);
-    rootPaneContainer.getContentPane().add(UIManager.BASE_AREA, BorderLayout.CENTER);
+    rootPaneContainer.getContentPane().add(GuiUtils.getUICore().getBaseArea(), BorderLayout.CENTER);
     // Allow dropping series into the empty main area
-    UIManager.MAIN_AREA.getComponent().setTransferHandler(new SeriesHandler());
-    UIManager.MAIN_AREA.setLocation(CLocation.base().normalRectangle(0, 0, 1, 1));
-    UIManager.MAIN_AREA.setVisible(true);
+    CWorkingArea mainArea = GuiUtils.getUICore().getMainArea();
+    mainArea.getComponent().setTransferHandler(new SeriesHandler());
+    mainArea.setLocation(CLocation.base().normalRectangle(0, 0, 1, 1));
+    mainArea.setVisible(true);
 
-    boolean updateRelease =
-        BundleTools.SYSTEM_PREFERENCES.getBooleanProperty("weasis.update.release", true);
+    WProperties preferences = GuiUtils.getUICore().getSystemPreferences();
+    boolean updateRelease = preferences.getBooleanProperty("weasis.update.release", true);
     boolean showDownloadRelease =
-        BundleTools.SYSTEM_PREFERENCES.getBooleanProperty("weasis.show.update.next.release", true);
+        preferences.getBooleanProperty("weasis.show.update.next.release", true);
     if (updateRelease && showDownloadRelease) {
       CompletableFuture.runAsync(() -> checkReleaseUpdate(frame));
     }
@@ -368,12 +367,13 @@ public class WeasisWin {
     if (screenBound == null && group != null) {
       boolean bestDefaultLayout =
           LangUtil.getNULLtoTrue((Boolean) props.get(ViewerPluginBuilder.BEST_DEF_LAYOUT));
-      synchronized (UIManager.VIEWER_PLUGINS) {
-        for (int i = UIManager.VIEWER_PLUGINS.size() - 1; i >= 0; i--) {
-          final ViewerPlugin<?> p = UIManager.VIEWER_PLUGINS.get(i);
+      List<ViewerPlugin<?>> viewerPlugins = GuiUtils.getUICore().getViewerPlugins();
+      synchronized (viewerPlugins) {
+        for (int i = viewerPlugins.size() - 1; i >= 0; i--) {
+          final ViewerPlugin<?> p = viewerPlugins.get(i);
           // Remove the views not attached to any window (Fix bugs with external window)
           if (WinUtil.getParentWindow(p) == null) {
-            UIManager.VIEWER_PLUGINS.remove(i);
+            viewerPlugins.remove(i);
             continue;
           }
           if (p instanceof ImageViewerPlugin viewer
@@ -475,15 +475,10 @@ public class WeasisWin {
     GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
     GraphicsDevice[] gd = ge.getScreenDevices();
     if (gd.length > 1) {
-      // dockable.setExternalizable(true);
       Rectangle bound = WinUtil.getClosedScreenBound(rootPaneContainer.getRootPane().getBounds());
-      // LocationHint hint =
-      // new LocationHint(LocationHint.DOCKABLE,
-      // bibliothek.gui.dock.action.LocationHint.LEFT_OF_ALL);
-      // DefaultDockActionSource source = new DefaultDockActionSource(hint);
-      // source.add(setupDropDownMenu(viewer.getDockable()));
-      // source.addSeparator();
-
+      if (bound == null) {
+        return;
+      }
       for (GraphicsDevice graphicsDevice : gd) {
         GraphicsConfiguration config = graphicsDevice.getDefaultConfiguration();
         final Rectangle b = config.getBounds();
@@ -496,20 +491,6 @@ public class WeasisWin {
           dockable.setDefaultLocation(
               ExtendedMode.EXTERNALIZED,
               CLocation.external(b.x, b.y, b.width - 150, b.height - 150));
-
-          // GuiExecutor.instance().execute(new Runnable() {
-          //
-          // @Override
-          // public void run() {
-          // if (dockable.isVisible()) {
-          // dockable.setLocation(CLocation.external(b.x, b.y, b.width - 150, b.height - 150));
-          // UIManager.DOCKING_CONTROL.addVetoFocusListener(UIManager.DOCKING_VETO_FOCUS);
-          // dockable.setExtendedMode(ExtendedMode.MAXIMIZED);
-          // UIManager.DOCKING_CONTROL.removeVetoFocusListener(UIManager.DOCKING_VETO_FOCUS);
-          // }
-          // }
-          // });
-          // source.add(new CloseAction(UIManager.DOCKING_CONTROLLER));
           break;
         }
       }
@@ -519,10 +500,10 @@ public class WeasisWin {
   private static boolean registerDetachWindow(final ViewerPlugin plugin, Rectangle screenBound) {
     if (plugin != null && screenBound != null) {
       ViewerPlugin oldWin = null;
-
-      synchronized (UIManager.VIEWER_PLUGINS) {
-        for (int i = UIManager.VIEWER_PLUGINS.size() - 1; i >= 0; i--) {
-          ViewerPlugin p = UIManager.VIEWER_PLUGINS.get(i);
+      List<ViewerPlugin<?>> viewerPlugins = GuiUtils.getUICore().getViewerPlugins();
+      synchronized (viewerPlugins) {
+        for (int i = viewerPlugins.size() - 1; i >= 0; i--) {
+          ViewerPlugin p = viewerPlugins.get(i);
           if (p.getDockable().isExternalizable()) {
             Dialog dialog = WinUtil.getParentDialog(p);
             if (dialog != null
@@ -546,9 +527,11 @@ public class WeasisWin {
             .execute(
                 () -> {
                   if (dock.isVisible()) {
-                    UIManager.DOCKING_CONTROL.addVetoFocusListener(UIManager.DOCKING_VETO_FOCUS);
+                    CControl control = GuiUtils.getUICore().getDockingControl();
+                    CVetoFocusListener vetoFocus = GuiUtils.getUICore().getDockingVetoFocus();
+                    control.addVetoFocusListener(vetoFocus);
                     dock.setExtendedMode(ExtendedMode.MAXIMIZED);
-                    UIManager.DOCKING_CONTROL.removeVetoFocusListener(UIManager.DOCKING_VETO_FOCUS);
+                    control.removeVetoFocusListener(vetoFocus);
                   }
                 });
       } else {
@@ -569,7 +552,7 @@ public class WeasisWin {
   }
 
   public boolean registerPlugin(final ViewerPlugin plugin) {
-    if (plugin == null || UIManager.VIEWER_PLUGINS.contains(plugin)) {
+    if (plugin == null || GuiUtils.getUICore().getViewerPlugins().contains(plugin)) {
       return false;
     }
     plugin.showDockable();
@@ -582,7 +565,9 @@ public class WeasisWin {
 
   public synchronized void setSelectedPlugin(ViewerPlugin plugin) {
     if (plugin == null) {
-      UIManager.toolbarContainer.registerToolBar(UIManager.EXPLORER_PLUGIN_TOOLBARS);
+      GuiUtils.getUICore()
+          .getToolbarContainer()
+          .registerToolBar(GuiUtils.getUICore().getExplorerPluginToolbars());
       List<DockableTool> oldTool = selectedPlugin == null ? null : selectedPlugin.getToolPanel();
       if (oldTool != null) {
         for (DockableTool p : oldTool) {
@@ -604,8 +589,8 @@ public class WeasisWin {
     selectedPlugin = plugin;
     menuSelectedPlugin.setText(selectedPlugin.getName());
 
-    UIManager.updateTools(oldPlugin, selectedPlugin, false);
-    UIManager.updateToolbars(oldPlugin, selectedPlugin, false);
+    GuiUtils.getUICore().updateTools(oldPlugin, selectedPlugin, false);
+    GuiUtils.getUICore().updateToolbars(oldPlugin, selectedPlugin, false);
 
     selectedPlugin.setSelected(true);
   }
@@ -623,8 +608,8 @@ public class WeasisWin {
       config = defMonitor.getGraphicsConfiguration();
     }
 
-    int lastState =
-        BundleTools.LOCAL_UI_PERSISTENCE.getIntProperty("last.window.state", Frame.MAXIMIZED_BOTH);
+    WProperties localPersistence = GuiUtils.getUICore().getLocalPersistence();
+    int lastState = localPersistence.getIntProperty("last.window.state", Frame.MAXIMIZED_BOTH);
     if (lastState != Frame.NORMAL) {
       lastState = Frame.MAXIMIZED_BOTH;
     }
@@ -637,13 +622,10 @@ public class WeasisWin {
       b.width -= (inset.left + inset.right);
       b.height -= (inset.top + inset.bottom);
       if (lastState == Frame.NORMAL) {
-        int x = BundleTools.LOCAL_UI_PERSISTENCE.getIntProperty("last.window.x", 0);
-        int y = BundleTools.LOCAL_UI_PERSISTENCE.getIntProperty("last.window.y", 0);
-        int w =
-            BundleTools.LOCAL_UI_PERSISTENCE.getIntProperty("last.window.width", Integer.MAX_VALUE);
-        int h =
-            BundleTools.LOCAL_UI_PERSISTENCE.getIntProperty(
-                "last.window.height", Integer.MAX_VALUE);
+        int x = localPersistence.getIntProperty("last.window.x", 0);
+        int y = localPersistence.getIntProperty("last.window.y", 0);
+        int w = localPersistence.getIntProperty("last.window.width", Integer.MAX_VALUE);
+        int h = localPersistence.getIntProperty("last.window.height", Integer.MAX_VALUE);
         if (x < b.x) {
           x = b.x;
         }
@@ -688,6 +670,8 @@ public class WeasisWin {
     menuBar.add(menuSelectedPlugin);
     menuSelectedPlugin.addPopupMenuListener();
 
+    WProperties preferences = GuiUtils.getUICore().getSystemPreferences();
+
     final JMenu helpMenuItem = new JMenu(Messages.getString("WeasisWin.help"));
     final String helpURL = System.getProperty("weasis.help.url");
     if (helpURL != null) {
@@ -698,9 +682,7 @@ public class WeasisWin {
 
     final JMenuItem webMenuItem = new JMenuItem(Messages.getString("WeasisWin.shortcuts"));
     webMenuItem.addActionListener(
-        e ->
-            openBrowser(
-                webMenuItem, BundleTools.SYSTEM_PREFERENCES.getProperty("weasis.help.shortcuts")));
+        e -> openBrowser(webMenuItem, preferences.getProperty("weasis.help.shortcuts")));
     helpMenuItem.add(webMenuItem);
 
     final JMenuItem websiteMenuItem =
@@ -708,9 +690,7 @@ public class WeasisWin {
             Messages.getString("WeasisWin.online"), ResourceUtil.getIcon(ActionIcon.HELP));
     GuiUtils.applySelectedIconEffect(websiteMenuItem);
     websiteMenuItem.addActionListener(
-        e ->
-            openBrowser(
-                websiteMenuItem, BundleTools.SYSTEM_PREFERENCES.getProperty("weasis.help.online")));
+        e -> openBrowser(websiteMenuItem, preferences.getProperty("weasis.help.online")));
     helpMenuItem.add(websiteMenuItem);
     helpMenuItem.add(new JSeparator());
 
@@ -812,8 +792,9 @@ public class WeasisWin {
                     openBrowser(parent, object.getString("url")); // NON-NLS
                   }
                   if (dontAskMeAgain.isSelected()) {
-                    BundleTools.SYSTEM_PREFERENCES.putBooleanProperty(
-                        "weasis.show.update.next.release", false);
+                    GuiUtils.getUICore()
+                        .getSystemPreferences()
+                        .putBooleanProperty("weasis.show.update.next.release", false);
                   }
                 });
       }
@@ -830,7 +811,7 @@ public class WeasisWin {
   }
 
   private void buildToolBarSubMenu(final JMenu toolBarMenu) {
-    List<Toolbar> bars = UIManager.toolbarContainer.getRegisteredToolBars();
+    List<Toolbar> bars = GuiUtils.getUICore().getToolbarContainer().getRegisteredToolBars();
     for (final Toolbar bar : bars) {
       if (!Insertable.Type.EMPTY.equals(bar.getType())) {
         JCheckBoxMenuItem item =
@@ -838,8 +819,9 @@ public class WeasisWin {
         item.addActionListener(
             e -> {
               if (e.getSource() instanceof JCheckBoxMenuItem menuItem) {
-                UIManager.toolbarContainer.displayToolbar(
-                    bar.getComponent(), menuItem.isSelected());
+                GuiUtils.getUICore()
+                    .getToolbarContainer()
+                    .displayToolbar(bar.getComponent(), menuItem.isSelected());
               }
             });
         toolBarMenu.add(item);
@@ -857,8 +839,8 @@ public class WeasisWin {
   }
 
   private static void buildExplorerSubMenu(final JMenu explorerMenu) {
-    synchronized (UIManager.EXPLORER_PLUGINS) {
-      List<DataExplorerView> explorers = UIManager.EXPLORER_PLUGINS;
+    synchronized (GuiUtils.getUICore().getExplorerPlugins()) {
+      List<DataExplorerView> explorers = GuiUtils.getUICore().getExplorerPlugins();
       for (final DataExplorerView dataExplorerView : explorers) {
         if (dataExplorerView instanceof final DockableTool t) {
           buildSubMenu(explorerMenu, t);
@@ -892,18 +874,24 @@ public class WeasisWin {
   }
 
   private static void buildOpenSubMenu(final JMenu importMenu) {
-    UIManager.SERIES_VIEWER_FACTORIES.forEach(d -> fillMenu(importMenu, d.getOpenActions()));
+    GuiUtils.getUICore()
+        .getSeriesViewerFactories()
+        .forEach(d -> fillMenu(importMenu, d.getOpenActions()));
   }
 
   private static void buildImportSubMenu(final JMenu importMenu) {
-    UIManager.EXPLORER_PLUGINS.forEach(d -> fillMenu(importMenu, d.getOpenImportDialogAction()));
+    GuiUtils.getUICore()
+        .getExplorerPlugins()
+        .forEach(d -> fillMenu(importMenu, d.getOpenImportDialogAction()));
   }
 
   private void buildExportSubMenu(final JMenu exportMenu) {
     if (selectedPlugin != null) {
       fillMenu(exportMenu, selectedPlugin.getExportActions());
     }
-    UIManager.EXPLORER_PLUGINS.forEach(d -> fillMenu(exportMenu, d.getOpenExportDialogAction()));
+    GuiUtils.getUICore()
+        .getExplorerPlugins()
+        .forEach(d -> fillMenu(exportMenu, d.getOpenExportDialogAction()));
   }
 
   private static void fillMenu(final JMenu menu, List<Action> actions) {
@@ -1023,7 +1011,13 @@ public class WeasisWin {
 
     menuFile.add(new JSeparator());
     DefaultAction exitAction =
-        new DefaultAction(Messages.getString("ExitAction.title"), e -> closeWindow());
+        new DefaultAction(
+            Messages.getString("ExitAction.title"),
+            e -> {
+              if (canBeClosed()) {
+                closeAllRunnable();
+              }
+            });
     menuFile.add(new JMenuItem(exitAction));
   }
 
@@ -1035,9 +1029,9 @@ public class WeasisWin {
       Series seq;
       try {
         seq = (Series) transferable.getTransferData(Series.sequenceDataFlavor);
-
-        synchronized (UIManager.SERIES_VIEWER_FACTORIES) {
-          for (final SeriesViewerFactory factory : UIManager.SERIES_VIEWER_FACTORIES) {
+        List<SeriesViewerFactory> viewerFactories = GuiUtils.getUICore().getSeriesViewerFactories();
+        synchronized (viewerFactories) {
+          for (final SeriesViewerFactory factory : viewerFactories) {
             if (factory.canReadMimeType(seq.getMimeType())) {
               DataExplorerModel model = (DataExplorerModel) seq.getTagValue(TagW.ExplorerModel);
               if (model instanceof TreeModel treeModel) {
@@ -1066,7 +1060,8 @@ public class WeasisWin {
     protected boolean dropFiles(List<File> files, TransferSupport support) {
       if (files != null) {
         DropLocation dropLocation = support.getDropLocation();
-        List<DataExplorerView> explorers = new ArrayList<>(UIManager.EXPLORER_PLUGINS);
+        List<DataExplorerView> explorers =
+            new ArrayList<>(GuiUtils.getUICore().getExplorerPlugins());
         for (int i = explorers.size() - 1; i >= 0; i--) {
           if (!explorers.get(i).canImportFiles()) {
             explorers.remove(i);

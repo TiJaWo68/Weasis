@@ -52,12 +52,12 @@
     <sling.commons.log.version>3.0.2-r5</sling.commons.log.version>
     <dockingframes.version>1.1.6</dockingframes.version>
     <weasis-dicom-tools.version>5.30.0</weasis-dicom-tools.version>
-    <weasis.core.img.version>4.8.0</weasis.core.img.version>
+    <weasis.core.img.version>4.8.0.1</weasis.core.img.version>
     <weasis.opencv.native.version>4.8.0-dcm</weasis.opencv.native.version>
     <javax.json.version>1.1.6</javax.json.version>
     <jaxb.osgi.version>3.0.2</jaxb.osgi.version>
     <joml.version>1.10.5</joml.version>
-    <jogamp.version>2.4.0</jogamp.version>
+    <jogamp.version>2.5.0</jogamp.version>
     <jackson.version>2.15.1</jackson.version>
     <scribejava.version>8.3.3</scribejava.version>
     <zip4j.version>2.11.4</zip4j.version>
@@ -65,6 +65,7 @@
     <assertj.version>3.24.2</assertj.version>
     <mockito.version>5.2.0</mockito.version>
     <byte-buddy.version>1.14.6</byte-buddy.version>
+    <byte-buddy-agent.version>1.14.1</byte-buddy-agent.version>
   </properties>
 
   <licenses>
@@ -324,6 +325,25 @@
           </java>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.8.10</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <phase>test</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
 
     <resources>
@@ -523,6 +543,12 @@
 
       <!-- FOR TESTS -->
       <dependency>
+        <groupId>net.bytebuddy</groupId>
+        <artifactId>byte-buddy-agent</artifactId>
+        <version>${byte-buddy-agent.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
         <groupId>org.assertj</groupId>
         <artifactId>assertj-core</artifactId>
         <version>${assertj.version}</version>
@@ -544,6 +570,7 @@
         <groupId>net.bytebuddy</groupId>
         <artifactId>byte-buddy</artifactId>
         <version>${byte-buddy.version}</version>
+        <scope>test</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -589,7 +616,6 @@
       <groupId>org.weasis.core</groupId>
       <artifactId>weasis-core-img</artifactId>
       <version>${weasis.core.img.version}</version>
-      <classifier>jdk11</classifier>
       <scope>provided</scope>
     </dependency>
 
@@ -628,6 +654,14 @@
     </dependency>
 
     <!-- FOR TESTS -->
+    <dependency>
+      <groupId>net.bytebuddy</groupId>
+      <artifactId>byte-buddy-agent</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>net.bytebuddy</groupId>
+      <artifactId>byte-buddy</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
