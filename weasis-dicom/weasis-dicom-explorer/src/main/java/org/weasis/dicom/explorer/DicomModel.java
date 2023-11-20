@@ -65,13 +65,12 @@ import org.weasis.core.ui.editor.ViewerPluginBuilder;
 import org.weasis.core.util.LangUtil;
 import org.weasis.core.util.StringUtil;
 import org.weasis.dicom.codec.DicomEncapDocElement;
-import org.weasis.dicom.codec.DicomEncapDocSeries;
 import org.weasis.dicom.codec.DicomImageElement;
 import org.weasis.dicom.codec.DicomMediaIO;
 import org.weasis.dicom.codec.DicomSeries;
 import org.weasis.dicom.codec.DicomSpecialElement;
 import org.weasis.dicom.codec.DicomVideoElement;
-import org.weasis.dicom.codec.DicomVideoSeries;
+import org.weasis.dicom.codec.FilesExtractor;
 import org.weasis.dicom.codec.KOSpecialElement;
 import org.weasis.dicom.codec.PRSpecialElement;
 import org.weasis.dicom.codec.RejectedKOSpecialElement;
@@ -856,7 +855,20 @@ public class DicomModel implements TreeModel, DataExplorerModel {
         rebuildSeries(dicomReader, media);
         return true;
       }
-      if (original instanceof DicomSeries initialSeries) {
+
+      if (original instanceof FilesExtractor) {
+        if (original.size(null) > 0) {
+          // Always split when it is a video or an encapsulated document
+          if (media instanceof DicomVideoElement || media instanceof DicomEncapDocElement) {
+            splitSeries(dicomReader, original, media);
+            return true;
+          } else {
+            findMatchingSeriesOrSplit(original, media);
+          }
+        } else {
+          original.addMedia(media);
+        }
+      } else if (original instanceof DicomSeries initialSeries) {
         // Handle cases when the Series is created before getting the image (downloading)
         if (media instanceof DicomVideoElement || media instanceof DicomEncapDocElement) {
           if (original.size(null) > 0) {
@@ -943,18 +955,6 @@ public class DicomModel implements TreeModel, DataExplorerModel {
           splitSeries(dicomReader, initialSeries, media);
           return true;
         }
-      } else if (original instanceof DicomVideoSeries || original instanceof DicomEncapDocSeries) {
-        if (original.size(null) > 0) {
-          // Always split when it is a video or an encapsulated document
-          if (media instanceof DicomVideoElement || media instanceof DicomEncapDocElement) {
-            splitSeries(dicomReader, original, media);
-            return true;
-          } else {
-            findMatchingSeriesOrSplit(original, media);
-          }
-        } else {
-          original.addMedia(media);
-        }
       }
     }
     return false;
@@ -1007,10 +1007,23 @@ public class DicomModel implements TreeModel, DataExplorerModel {
     return false;
   }
 
+  private static boolean hasSameConcatenationUID(
+      MediaElement firstMedia, final MediaElement media) {
+    if (firstMedia instanceof DicomImageElement && media instanceof DicomImageElement) {
+      String firstConcatenationUID =
+          TagD.getTagValue(firstMedia, Tag.ConcatenationUID, String.class);
+      if (firstConcatenationUID != null) {
+        String concatenationUID = TagD.getTagValue(media, Tag.ConcatenationUID, String.class);
+        return Objects.equals(firstConcatenationUID, concatenationUID);
+      }
+    }
+    return false;
+  }
+
   private static boolean isSimilar(List<Rule> list, Series<?> s, final MediaElement media) {
     final MediaElement firstMedia = s.getMedia(0, null, null);
-    if (firstMedia == null) {
-      // no image
+    if (firstMedia == null || hasSameConcatenationUID(firstMedia, media)) {
+      // No image or has the same concatenation UID
       return true;
     }
     // Not similar when the instances have different classes (even when inheriting class)

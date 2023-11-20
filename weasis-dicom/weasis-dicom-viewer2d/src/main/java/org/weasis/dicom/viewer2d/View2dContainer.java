@@ -277,7 +277,7 @@ public class View2dContainer extends DicomViewerPlugin implements PropertyChange
           InsertableUtil.getCName(Basic3DToolBar.class),
           key,
           true)) {
-        TOOLBARS.add(new Basic3DToolBar<DicomImageElement>(50));
+        TOOLBARS.add(new Basic3DToolBar(50));
       }
       if (InsertableUtil.getBooleanProperty(
           preferences,
@@ -766,6 +766,16 @@ public class View2dContainer extends DicomViewerPlugin implements PropertyChange
       LOGGER.error("Cannot create {}", clazz, e);
     }
     return null;
+  }
+
+  @Override
+  public Class<?> getSeriesViewerClass() {
+    return view2dClass;
+  }
+
+  @Override
+  public GridBagLayoutModel getDefaultLayoutModel() {
+    return VIEWS_1x1;
   }
 
   @Override

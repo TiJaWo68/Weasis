@@ -89,14 +89,22 @@ public class DicomImageElement extends ImageElement implements DicomElement {
     val = TagD.getTagValue(mediaIO, Tag.PixelSpacing, double[].class);
 
     if (val == null || val.length != 2) {
-      val = getMagnifiedPixelSpacing("MG".equals(modality));
+      boolean magFactor =
+          "CR".equals(modality)
+              || "DX".equals(modality)
+              || "IO".equals(modality)
+              || "MG".equals(modality)
+              || "PX".equals(modality)
+              || "RF".equals(modality)
+              || "XA".equals(modality);
+      val = getMagnifiedPixelSpacing(magFactor);
     } else {
       pixelSizeCalibrationDescription =
           TagD.getTagValue(mediaIO, Tag.PixelSpacingCalibrationDescription, String.class);
     }
     if (val == null || val.length != 2) {
       val = TagD.getTagValue(mediaIO, Tag.NominalScannedPixelSpacing, double[].class);
-      pixelSizeCalibrationDescription = val == null ? null : "At scanner";
+      pixelSizeCalibrationDescription = val == null ? null : "At scanner"; // NON-NLS
     }
 
     if (val != null && val.length == 2 && val[0] > 0.0 && val[1] > 0.0) {
@@ -188,7 +196,7 @@ public class DicomImageElement extends ImageElement implements DicomElement {
       if (estimatedFactor != null && estimatedFactor > 0) {
         val[0] = val[0] / estimatedFactor;
         val[1] = val[1] / estimatedFactor;
-        pixelSizeCalibrationDescription = "Magnified";
+        pixelSizeCalibrationDescription = "Magnified"; // NON-NLS
       }
     }
     return val;
