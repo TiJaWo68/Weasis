@@ -1,12 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
 <svg width="64" height="64" xmlns="http://www.w3.org/2000/svg">
- <title>VHS</title>
-
- <g>
-  <title>Layer 1</title>
-  <g id="svg_29">
-   <ellipse ry="11.875" rx="12.125" id="svg_26" cy="24.575" cx="33.625" stroke="#6e6e6e" fill="none"/>
-   <line stroke-linecap="undefined" stroke-linejoin="undefined" id="svg_27" y2="32.45" x2="50.75" y1="15.2" x1="15" stroke="#6e6e6e" fill="none"/>
-   <line stroke-linecap="undefined" stroke-linejoin="undefined" id="svg_28" y2="61.7" x2="15.25" y1="3.45" x1="44.75" stroke="#6e6e6e" fill="none"/>
+  <g stroke="#6e6e6e" fill="none" stroke-width="4">
+    <ellipse ry="11.875" rx="12.125" cy="24.575" cx="33.625"/>
+    <line stroke-linecap="undefined" stroke-linejoin="undefined" y2="32.45" x2="50.75" y1="15.2" x1="15"/>
+    <line stroke-linecap="undefined" stroke-linejoin="undefined" y2="61.7" x2="15.25" y1="3.45" x1="44.75"/>
   </g>
- </g>
+  <g style="stroke-width: 4; stroke: rgb(46, 159, 214); fill-opacity: 0;">
+    <path d="M 38.001 2.025 L 48.001 2.025 L 48.001 12.025 L 38.001 12.025 L 38.001 2.025 Z" />
+    <path d="M 50.133 28.299 H 60.133 V 38.299 H 50.133 V 28.299 Z" />
+    <path d="M 7.769 7.429 H 17.769 V 17.429 H 7.769 V 7.429 Z" />
+    <path d="M 11.507 54.153 L 21.507 54.153 L 21.507 64.153 L 11.507 64.153 L 11.507 54.153 Z" />
+  </g>
 </svg>
