@@ -39,6 +39,10 @@ public class ImportToolBar extends WtoolBar {
     super(Messages.getString("ImportToolBar.import_dcm"), index);
     setAttachedInsertable(explorer);
 
+    JButton button = GammaViewConfig.getInstance().getConfiguredToolButton();
+	if (button!=null)
+		add(button);
+
     final DicomModel model = (DicomModel) explorer.getDataExplorerModel();
     WProperties preferences = GuiUtils.getUICore().getSystemPreferences();
     if (preferences.getBooleanProperty("weasis.import.dicom", true)) {

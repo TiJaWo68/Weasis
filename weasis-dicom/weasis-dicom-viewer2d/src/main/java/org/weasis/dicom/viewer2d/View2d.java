@@ -110,6 +110,7 @@ import org.weasis.dicom.codec.geometry.LocalizerPoster;
 import org.weasis.dicom.codec.geometry.PatientOrientation.Biped;
 import org.weasis.dicom.explorer.DicomModel;
 import org.weasis.dicom.explorer.DicomSeriesHandler;
+import org.weasis.dicom.explorer.GammaViewConfig;
 import org.weasis.dicom.explorer.pr.PrGraphicUtil;
 import org.weasis.dicom.viewer2d.KOComponentFactory.KOViewButton;
 import org.weasis.dicom.viewer2d.KOComponentFactory.KOViewButton.eState;
@@ -200,7 +201,7 @@ public class View2d extends DefaultView2d<DicomImageElement> {
   @Override
   protected void initActionWState() {
     super.initActionWState();
-    actionsInView.put(ActionW.SORT_STACK.cmd(), SortSeriesStack.instanceNumber);
+	actionsInView.put(ActionW.SORT_STACK.cmd(), GammaViewConfig.getInstance().getDefaultSeriesComparator(series));
 
     // Preprocessing
     actionsInView.put(ActionW.CROP.cmd(), null);
