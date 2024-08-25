@@ -9,23 +9,22 @@
  */
 package org.weasis.launcher;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.LogManager;
+import org.weasis.pref.ConfigData;
 
 public class AppLauncher extends WeasisLauncher implements Singleton.SingletonApp {
 
   static {
-    // Configuration of java.util.logging.Logger
-    try {
-      LogManager.getLogManager()
-          .readConfiguration(
-              WeasisLauncher.class.getResourceAsStream("/logging.properties")); // NON-NLS
-    } catch (SecurityException | IOException e) {
-      e.printStackTrace(); // NOSONAR cannot initialize logger
-    }
+    //    // Configuration of java.util.logging.Logger
+    //    try {
+    //      LogManager.getLogManager()
+    //          .readConfiguration(
+    //              WeasisLauncher.class.getResourceAsStream("/logging.properties")); // NON-NLS
+    //    } catch (SecurityException | IOException e) {
+    //      e.printStackTrace(); // NOSONAR cannot initialize logger
+    //    }
   }
 
   public AppLauncher(ConfigData configData) {
@@ -74,10 +73,11 @@ public class AppLauncher extends WeasisLauncher implements Singleton.SingletonAp
   @Override
   public boolean canStartNewActivation(Properties prop) {
     boolean sameUser =
-        configData.isPropertyValueSimilar(P_WEASIS_USER, prop.getProperty(P_WEASIS_USER));
+        configData.isPropertyValueSimilar(
+            ConfigData.P_WEASIS_USER, prop.getProperty(ConfigData.P_WEASIS_USER));
     boolean sameConfig =
         configData.isPropertyValueSimilar(
-            P_WEASIS_CONFIG_HASH, prop.getProperty(P_WEASIS_CONFIG_HASH));
+            ConfigData.P_WEASIS_CONFIG_HASH, prop.getProperty(ConfigData.P_WEASIS_CONFIG_HASH));
     return sameUser && sameConfig;
   }
 

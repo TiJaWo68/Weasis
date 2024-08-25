@@ -81,7 +81,7 @@
       "value": "11112",
       "description": "Port of DICOM send destination for Dicomizer",
       "type": "A",
-      "JavaType": "INT",
+      "javaType": "INT",
       "category": "DICOM"
     },
     {
@@ -107,14 +107,14 @@
     },
     {
       "code": "weasis.acquire.meta.series.display",
-      "value": "Modality,OperatorsName,ReferringPhysicianName,BodyPartExamined,SeriesDescription",
+      "value": "Modality,OperatorsName,ReferringPhysicianName,SeriesDescription",
       "description": "Comma-separated list of series tags which are displayed in UI. When a required tag has no value, it will be displayed.",
       "type": "A",
       "category": "METADATA"
     },
     {
       "code": "weasis.acquire.meta.series.edit",
-      "value": "ReferringPhysicianName,BodyPartExamined,SeriesDescription",
+      "value": "ReferringPhysicianName,SeriesDescription",
       "description": "Comma-separated list of series tags which are editable in UI. When a required tag has no value, it will be editable.",
       "type": "A",
       "category": "METADATA"
@@ -128,14 +128,14 @@
     },
     {
       "code": "weasis.acquire.meta.image.display",
-      "value": "ImageComments,ContentDate,ContentTime",
+      "value": "ImageComments,ContentDate,ContentTime,AnatomicRegion",
       "description": "Comma-separated list of image tags which are displayed in UI. When a required tag has no value, it will be displayed.",
       "type": "A",
       "category": "METADATA"
     },
     {
       "code": "weasis.acquire.meta.image.edit",
-      "value": "ImageComments,ContentDate,ContentTime",
+      "value": "ImageComments,ContentDate,ContentTime,AnatomicRegion",
       "description": "Comma-separated list of image tags which are editable in UI. When a required tag has no value, it will be editable.",
       "type": "A",
       "category": "METADATA"
@@ -166,7 +166,7 @@
       "value": "false",
       "description": "Base thumbnail explorer",
       "type": "A",
-      "JavaType": "BOOLEAN",
+      "javaType": "BOOLEAN",
       "category": "FACTORY"
     },
     {
@@ -174,7 +174,7 @@
       "value": "false",
       "description": "Open a file with the default system application",
       "type": "A",
-      "JavaType": "BOOLEAN",
+      "javaType": "BOOLEAN",
       "category": "FACTORY"
     },
     {
@@ -182,7 +182,7 @@
       "value": "false",
       "description": "DICOM series explorer",
       "type": "A",
-      "JavaType": "BOOLEAN",
+      "javaType": "BOOLEAN",
       "category": "FACTORY"
     },
     {
@@ -190,7 +190,7 @@
       "value": "false",
       "description": "DICOM Explorer preferences",
       "type": "A",
-      "JavaType": "BOOLEAN",
+      "javaType": "BOOLEAN",
       "category": "FACTORY"
     },
     {
@@ -202,7 +202,7 @@
       "value": "false",
       "description": "Show the rotation toolbar with base 2D viewer",
       "type": "A",
-      "JavaType": "BOOLEAN",
+      "javaType": "BOOLEAN",
       "category": "UI"
     },
     {
@@ -210,7 +210,7 @@
       "value": "false",
       "description": "Show the import toolbar with base 2D viewer",
       "type": "A",
-      "JavaType": "BOOLEAN",
+      "javaType": "BOOLEAN",
       "category": "UI"
     },
     {
@@ -223,9 +223,9 @@
     {
       "code": "weasis-base-viewer2d.all.imagetool.enable",
       "value": "false",
-      "description": "Show the image tool with base 2D viewer",
+      "description": "Show Image Tools with base 2D viewer",
       "type": "A",
-      "JavaType": "BOOLEAN",
+      "javaType": "BOOLEAN",
       "category": "UI"
     },
     {
@@ -233,7 +233,7 @@
       "value": "false",
       "description": "Application",
       "type": "A",
-      "JavaType": "BOOLEAN",
+      "javaType": "BOOLEAN",
       "category": "UI"
     },
     {
@@ -241,7 +241,7 @@
       "value": "false",
       "description": "Show the layout toolbar",
       "type": "A",
-      "JavaType": "BOOLEAN",
+      "javaType": "BOOLEAN",
       "category": "UI"
     },
     {
@@ -249,7 +249,7 @@
       "value": "false",
       "description": "Show the synch toolbar",
       "type": "A",
-      "JavaType": "BOOLEAN",
+      "javaType": "BOOLEAN",
       "category": "UI"
     }
   ]

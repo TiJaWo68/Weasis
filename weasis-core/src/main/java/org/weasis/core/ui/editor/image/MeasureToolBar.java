@@ -167,6 +167,9 @@ public class MeasureToolBar extends WtoolBar {
 			graphic.setLayerType(LayerType.ANNOTATION);
 			drawGraphicList.add(graphic);
 		}
+
+		selectionGraphic.setFilled(false);
+		selectionGraphic.setLabelVisible(false);
 		selectionGraphic.setLayerType(LayerType.TEMP_DRAW);
 	}
 
@@ -174,14 +177,12 @@ public class MeasureToolBar extends WtoolBar {
 	protected final ImageViewerEventManager<?> eventManager;
 
 	public MeasureToolBar(final ImageViewerEventManager<?> eventManager, int index) {
-		super(Messages.getString("MeasureToolBar.title"), index);
+		super(Messages.getString("MeasureToolBar.drawing_tools"), index);
 		if (eventManager == null) {
 			throw new IllegalArgumentException("EventManager cannot be null");
 		}
 		this.eventManager = eventManager;
-
-		MeasureToolBar.measureGraphicList.forEach(g -> MeasureToolBar.applyDefaultSetting(MeasureTool.viewSetting, g));
-		MeasureToolBar.drawGraphicList.forEach(g -> MeasureToolBar.applyDefaultSetting(MeasureTool.viewSetting, g));
+		MeasureTool.updateMeasureProperties();
 
 		Optional<ComboItemListener<Graphic>> measure = eventManager.getAction(ActionW.DRAW_MEASURE);
 		measure.ifPresent(comboItemListener -> add(buildButton(comboItemListener)));
@@ -218,6 +219,8 @@ public class MeasureToolBar extends WtoolBar {
 		if (graphic instanceof DragGraphic g) {
 			g.setLineThickness((float) setting.getLineWidth());
 			g.setPaint(setting.getLineColor());
+			g.setFilled(setting.isFilled());
+			g.setFillOpacity(setting.getFillOpacity());
 		}
 	}
 
@@ -233,8 +236,8 @@ public class MeasureToolBar extends WtoolBar {
 			}
 		}
 
-		DropDownButton dropDownButton = new DropDownButton(action.getActionW().cmd(),
-				buildIcon(selectionGraphic, draw ? ResourceUtil.getToolBarIcon(ActionIcon.DRAW_TOP_LEFT) : ResourceUtil.getToolBarIcon(ActionIcon.MEASURE_TOP_LEFT)), menu) {
+		DropDownButton dropDownButton = new DropDownButton(action.getActionW().cmd(), buildIcon(selectionGraphic,
+				draw ? ResourceUtil.getToolBarIcon(ActionIcon.DRAW_TOP_LEFT) : ResourceUtil.getToolBarIcon(ActionIcon.MEASURE_TOP_LEFT)), menu) {
 			@Override
 			protected JPopupMenu getPopupMenu() {
 				JPopupMenu m = (getMenuModel() == null) ? new JPopupMenu() : getMenuModel().createJPopupMenu();
@@ -298,7 +301,8 @@ public class MeasureToolBar extends WtoolBar {
 		public void changeButtonState() {
 			Object sel = dataModel.getSelectedItem();
 			if (button != null && sel instanceof Graphic graphic) {
-				FlatSVGIcon drawIcon = action == ActionW.DRAW_GRAPHICS ? ResourceUtil.getToolBarIcon(ActionIcon.DRAW_TOP_LEFT) : ResourceUtil.getToolBarIcon(ActionIcon.MEASURE_TOP_LEFT);
+				FlatSVGIcon drawIcon = action == ActionW.DRAW_GRAPHICS ? ResourceUtil.getToolBarIcon(ActionIcon.DRAW_TOP_LEFT)
+						: ResourceUtil.getToolBarIcon(ActionIcon.MEASURE_TOP_LEFT);
 				Icon icon = buildIcon(graphic, drawIcon);
 				button.setIcon(icon);
 				button.setActionCommand(sel.toString());

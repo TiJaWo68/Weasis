@@ -9,9 +9,11 @@
  */
 package org.weasis.dicom.codec;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import org.dcm4che3.data.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +26,7 @@ import org.weasis.core.api.media.data.Series;
 import org.weasis.core.api.media.data.SeriesEvent;
 import org.weasis.core.api.media.data.TagView;
 import org.weasis.core.api.media.data.TagW;
+import org.weasis.core.ui.editor.image.DefaultView2d;
 import org.weasis.core.util.FileUtil;
 import org.weasis.core.util.MathUtil;
 import org.weasis.core.util.StringUtil;
@@ -101,14 +104,14 @@ public class DicomSeries extends Series<DicomImageElement> {
       toolTips.append(Messages.getString("DicomSeries.size"));
       toolTips.append(StringUtil.COLON_AND_SPACE);
       toolTips.append(FileUtil.humanReadableByte(getFileSize(), false));
-      toolTips.append("<br>");
+      toolTips.append(GuiUtils.HTML_BR);
     }
     toolTips.append(GuiUtils.HTML_END);
     return toolTips.toString();
   }
 
   public static StringBuilder getToolTips(Series<?> series) {
-    StringBuilder toolTips = new StringBuilder("<html>");
+    StringBuilder toolTips = new StringBuilder(GuiUtils.HTML_START);
     series.addToolTipsElement(
         toolTips, Messages.getString("DicomSeries.pat"), TagD.get(Tag.PatientName));
     series.addToolTipsElement(
@@ -149,6 +152,25 @@ public class DicomSeries extends Series<DicomImageElement> {
   @Override
   public void dispose() {
     stopPreloading(this);
+    String seriesUID = (String) getTagValue(getTagID());
+    String modality = TagD.getTagValue(this, Tag.Modality, String.class);
+    if (DicomMediaIO.isHiddenModality(modality)) {
+      HiddenSeriesManager manager = HiddenSeriesManager.getInstance();
+      Set<HiddenSpecialElement> removed = manager.series2Elements.remove(seriesUID);
+      if (removed != null && !removed.isEmpty()) {
+        String patientPseudoUID =
+            (String) removed.iterator().next().getTagValue(TagW.PatientPseudoUID);
+        if (patientPseudoUID != null) {
+          Set<String> list = manager.patient2Series.get(patientPseudoUID);
+          if (list != null) {
+            list.remove(seriesUID);
+            if (list.isEmpty()) {
+              manager.patient2Series.remove(patientPseudoUID);
+            }
+          }
+        }
+      }
+    }
     super.dispose();
   }
 
@@ -228,11 +250,10 @@ public class DicomSeries extends Series<DicomImageElement> {
         }
       }
       if (medias.isEmpty()) {
-        List<DicomSpecialElement> seriesSpecialElementList =
-            (List<DicomSpecialElement>) getTagValue(TagW.DicomSpecialElementList);
-        if (seriesSpecialElementList != null) {
-          for (DicomSpecialElement seriesSpecialElement : seriesSpecialElementList) {
-            Object val2 = seriesSpecialElement.getTagValue(tag);
+        List<? extends DicomSpecialElement> list = getAllDicomSpecialElement();
+        if (list != null) {
+          for (DicomSpecialElement specialElement : list) {
+            Object val2 = specialElement.getTagValue(tag);
             if (val.equals(val2)) {
               return true;
             }
@@ -243,12 +264,28 @@ public class DicomSeries extends Series<DicomImageElement> {
     return false;
   }
 
+  public List<DicomSpecialElement> getAllDicomSpecialElement() {
+    List<DicomSpecialElement> specialElements =
+        (List<DicomSpecialElement>) getTagValue(TagW.DicomSpecialElementList);
+    if (specialElements != null) {
+      return specialElements;
+    }
+
+    String seriesUID = (String) getTagValue(getTagID());
+    Set<HiddenSpecialElement> list =
+        HiddenSeriesManager.getInstance().series2Elements.get(seriesUID);
+    if (list != null && !list.isEmpty()) {
+      return new ArrayList<>(list);
+    }
+    return Collections.emptyList();
+  }
+
   @Override
   public DicomSpecialElement getFirstSpecialElement() {
     List<DicomSpecialElement> specialElements =
         (List<DicomSpecialElement>) getTagValue(TagW.DicomSpecialElementList);
     if (specialElements != null && !specialElements.isEmpty()) {
-      return specialElements.get(0);
+      return specialElements.getFirst();
     }
     return null;
   }
@@ -258,9 +295,9 @@ public class DicomSeries extends Series<DicomImageElement> {
     SeriesInstanceList seriesInstanceList =
         (SeriesInstanceList) getTagValue(TagW.WadoInstanceReferenceList);
     if (seriesInstanceList != null) {
-      return seriesInstanceList.size() >= 5;
+      return seriesInstanceList.size() >= DefaultView2d.MINIMAL_IMAGES_FOR_3D;
     }
-    return size(null) >= 5;
+    return size(null) >= DefaultView2d.MINIMAL_IMAGES_FOR_3D;
   }
 
   public static synchronized void startPreloading(

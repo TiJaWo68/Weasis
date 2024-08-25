@@ -116,7 +116,6 @@ public class TagW {
   public static final TagW SeriesOpen =
       new TagW("SeriesOpen", Messages.getString("TagElement.open"), TagType.BOOLEAN);
   public static final TagW SeriesFocused = new TagW("SeriesFocused", TagType.BOOLEAN);
-  public static final TagW StudyDicomRT = new TagW("RadiotherapyStudy", TagType.BOOLEAN);
   public static final TagW ImageWidth =
       new TagW("ImageWidth", Messages.getString("TagElement.img_w"), TagType.INTEGER);
   public static final TagW ImageHeight =
@@ -177,6 +176,8 @@ public class TagW {
 
   public static final TagW MonoChrome = new TagW("MonoChrome", TagType.BOOLEAN);
 
+  public static TagW AnatomicRegion = new TagW("AnatomicRegion", TagType.OBJECT);
+
   /** Basic EXIF tags: https://www.media.mit.edu/pia/Research/deepview/exif.html */
   public static final TagW ExifImageDescription = new TagW("ExifImageDescription", TagType.STRING);
 
@@ -198,7 +199,6 @@ public class TagW {
     addTag(ImageOrientationPlane);
     addTag(ImageWidth);
     addTag(SeriesFocused);
-    addTag(StudyDicomRT);
     addTag(SeriesLoading);
     addTag(SeriesOpen);
     addTag(SeriesSelected);
@@ -221,6 +221,7 @@ public class TagW {
     addTag(PRLUTsExplanation);
     addTag(PrDicomObject);
     addTag(MonoChrome);
+    addTag(AnatomicRegion);
   }
 
   protected final int id;

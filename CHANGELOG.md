@@ -1,5 +1,69 @@
 # Changelog
 
+## [v4.5.0](https://github.com/nroduit/Weasis/tree/v4.5.0) (2024-08-15)
+
+[Full Changelog](https://github.com/nroduit/Weasis/compare/v4.4.0...v4.5.0)
+
+**Implemented enhancements:**
+
+- Launch third party applications in Weasis UI [\#570](https://github.com/nroduit/Weasis/issues/570)
+- Command: add close a specific patient from its patient ID [\#562](https://github.com/nroduit/Weasis/issues/562)
+- Improve reading DICOM SEG [\#560](https://github.com/nroduit/Weasis/issues/560)
+- Measurements for US studies [\#32](https://github.com/nroduit/Weasis/issues/32)
+
+**Fixed bugs:**
+
+- In Query/Retrieve view, the selected DICOM node is not preserved when using More Options [\#571](https://github.com/nroduit/Weasis/issues/571)
+- Dicomizer: Limit the number of characters in metadata table according to the DICOM attributes [\#564](https://github.com/nroduit/Weasis/issues/564)
+- Preserve measurement tool unit selection within a series [\#551](https://github.com/nroduit/Weasis/issues/551)
+
+## [v4.4.0](https://github.com/nroduit/Weasis/tree/v4.4.0) (2024-05-06)
+
+[Full Changelog](https://github.com/nroduit/Weasis/compare/v4.3.0...v4.4.0)
+
+**Implemented enhancements:**
+
+- Update weasis-dicom-tools and dcm4che to 5.32.0 [\#547](https://github.com/nroduit/Weasis/issues/547)
+- Replace OSGI Sling logger by Logback 1.5.2 and update to slf4j 2.0.12 [\#540](https://github.com/nroduit/Weasis/issues/540)
+- Update to weasis-core-img 4.9.0.1 [\#539](https://github.com/nroduit/Weasis/issues/539)
+- Update to FlatLaf 3.4.1 [\#538](https://github.com/nroduit/Weasis/issues/538)
+
+**Fixed bugs:**
+
+-  Image editor tools are not visible with Dicomizer [\#546](https://github.com/nroduit/Weasis/issues/546)
+- Issue of removing series from the UI [\#544](https://github.com/nroduit/Weasis/issues/544)
+- Segmentation panel is sometimes not visible when loading DICOM SEG [\#541](https://github.com/nroduit/Weasis/issues/541)
+- MIP rebuild resets the image preset [\#528](https://github.com/nroduit/Weasis/issues/528)
+- Can't open DX studies [\#525](https://github.com/nroduit/Weasis/issues/525)
+
+**Merged pull requests:**
+
+- Changing maven compiler plugin config. Updating UICore singleton. [\#517](https://github.com/nroduit/Weasis/pull/517) ([mriss](https://github.com/mriss))
+
+## [v4.3.0](https://github.com/nroduit/Weasis/tree/v4.3.0) (2024-02-16)
+
+[Full Changelog](https://github.com/nroduit/Weasis/compare/v4.2.1...v4.3.0)
+
+**Implemented enhancements:**
+
+- Fill opacity as a graphic property [\#505](https://github.com/nroduit/Weasis/issues/505)
+- Cine for multiframe: variable speed and sweeping [\#497](https://github.com/nroduit/Weasis/issues/497)
+- Improve tag viewer [\#494](https://github.com/nroduit/Weasis/issues/494)
+- Merging several multiframe files with an identical concatenation UID [\#493](https://github.com/nroduit/Weasis/issues/493)
+- Display an error message when a file is identified as DICOM but cannot be read [\#479](https://github.com/nroduit/Weasis/issues/479)
+- Multiframe image fixed/varibale framerate \(Frame Time Vector support 0018,1065\) [\#424](https://github.com/nroduit/Weasis/issues/424)
+- Color and transparency display options for overlay data  [\#184](https://github.com/nroduit/Weasis/issues/184)
+
+**Fixed bugs:**
+
+- 3D Buttons are not active [\#504](https://github.com/nroduit/Weasis/issues/504)
+- The latest measurement values are not visible in the table [\#502](https://github.com/nroduit/Weasis/issues/502)
+- font size setting of Labels on image does not affect actually. [\#498](https://github.com/nroduit/Weasis/issues/498)
+
+**Closed issues:**
+
+- Weasis does not even reach the splash screen - possible wayland and flatpak interaction?   [\#449](https://github.com/nroduit/Weasis/issues/449)
+
 ## [v4.2.1](https://github.com/nroduit/Weasis/tree/v4.2.1) (2023-11-11)
 
 [Full Changelog](https://github.com/nroduit/Weasis/compare/v4.2.0...v4.2.1)

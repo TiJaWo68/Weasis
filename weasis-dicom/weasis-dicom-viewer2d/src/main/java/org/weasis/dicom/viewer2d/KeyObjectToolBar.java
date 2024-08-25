@@ -74,7 +74,7 @@ public class KeyObjectToolBar extends WtoolBar {
   }
 
   public KeyObjectToolBar(int index) {
-    super(Messages.getString("KeyObjectToolBar.title"), index);
+    super(Messages.getString("KOManager.ko_title"), index);
 
     final EventManager evtMgr = EventManager.getInstance();
     evtMgr
@@ -229,7 +229,7 @@ public class KeyObjectToolBar extends WtoolBar {
 
         DicomModel dicomModel = (DicomModel) selectedDicomSeries.getTagValue(TagW.ExplorerModel);
         if (dicomModel != null) {
-          dicomModel.removeSpecialElement(list.getSelectedValue());
+          dicomModel.removeHiddenSpecialElement(list.getSelectedValue());
           if (selectedView2d instanceof View2d view2d) {
             boolean needToRepaint = view2d.updateKOSelectedState(selectedView2d.getImage());
             if (needToRepaint) {

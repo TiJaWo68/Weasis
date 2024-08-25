@@ -44,6 +44,7 @@ import org.dcm4che3.data.ElementDictionary;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.VR;
 import org.dcm4che3.img.util.DateTimeUtils;
+import org.dcm4che3.img.util.DicomUtils;
 import org.dcm4che3.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,6 +59,24 @@ import org.weasis.dicom.codec.utils.DicomMediaUtils;
 public class TagD extends TagW {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(TagD.class);
+
+  private static final Map<VR, Integer> vrToMaxChars = new HashMap<>();
+
+  static {
+    vrToMaxChars.put(VR.AE, 16);
+    vrToMaxChars.put(VR.AS, 4);
+    vrToMaxChars.put(VR.CS, 16);
+    vrToMaxChars.put(VR.DA, 8);
+    vrToMaxChars.put(VR.DS, 16);
+    vrToMaxChars.put(VR.DT, 26);
+    vrToMaxChars.put(VR.IS, 12);
+    vrToMaxChars.put(VR.LO, 64);
+    vrToMaxChars.put(VR.LT, 10240);
+    vrToMaxChars.put(VR.PN, 129);
+    vrToMaxChars.put(VR.SH, 16);
+    vrToMaxChars.put(VR.ST, 1024);
+    vrToMaxChars.put(VR.UI, 64);
+  }
 
   static final DateTimeFormatter DICOM_DATE =
       new DateTimeFormatterBuilder()
@@ -242,6 +261,10 @@ public class TagD extends TagW {
     return getValueMultiplicity(value);
   }
 
+  public int getMaximumChars() {
+    return vrToMaxChars.getOrDefault(vr, 64);
+  }
+
   @Override
   public int hashCode() {
     final int prime = 31;
@@ -291,7 +314,7 @@ public class TagD extends TagW {
     if (isStringFamilyType()) {
       value =
           vmMax > 1
-              ? DicomMediaUtils.getStringArrayFromDicomElement(
+              ? DicomUtils.getStringArrayFromDicomElement(
                   dataset, id, privateCreatorID, (String[]) defaultValue)
               : dataset.getString(privateCreatorID, id, (String) defaultValue);
     } else if (TagType.DICOM_DATE.equals(type)
@@ -306,23 +329,23 @@ public class TagD extends TagW {
     } else if (TagType.INTEGER.equals(type)) {
       value =
           vmMax > 1
-              ? DicomMediaUtils.getIntArrayFromDicomElement(
+              ? DicomUtils.getIntArrayFromDicomElement(
                   dataset, id, privateCreatorID, (int[]) defaultValue)
-              : DicomMediaUtils.getIntegerFromDicomElement(
+              : DicomUtils.getIntegerFromDicomElement(
                   dataset, id, privateCreatorID, (Integer) defaultValue);
     } else if (TagType.FLOAT.equals(type)) {
       value =
           vmMax > 1
-              ? DicomMediaUtils.getFloatArrayFromDicomElement(
+              ? DicomUtils.getFloatArrayFromDicomElement(
                   dataset, id, privateCreatorID, (float[]) defaultValue)
-              : DicomMediaUtils.getFloatFromDicomElement(
+              : DicomUtils.getFloatFromDicomElement(
                   dataset, id, privateCreatorID, (Float) defaultValue);
     } else if (TagType.DOUBLE.equals(type)) {
       value =
           vmMax > 1
-              ? DicomMediaUtils.getDoubleArrayFromDicomElement(
+              ? DicomUtils.getDoubleArrayFromDicomElement(
                   dataset, id, privateCreatorID, (double[]) defaultValue)
-              : DicomMediaUtils.getDoubleFromDicomElement(
+              : DicomUtils.getDoubleFromDicomElement(
                   dataset, id, privateCreatorID, (Double) defaultValue);
     } else if (TagType.DICOM_SEQUENCE.equals(type)) {
       value = dataset.getSequence(privateCreatorID, id);
@@ -760,16 +783,18 @@ public class TagD extends TagW {
   public static TagW getUID(Level level) {
     if (level != null) {
       switch (level) {
-        case PATIENT:
+        case PATIENT -> {
           return TagW.PatientPseudoUID;
-        case STUDY:
+        }
+        case STUDY -> {
           return TagD.get(Tag.StudyInstanceUID);
-        case SERIES:
+        }
+        case SERIES -> {
           return TagW.SubseriesInstanceUID;
-        case INSTANCE, FRAME:
+        }
+        case INSTANCE, FRAME -> {
           return TagD.get(Tag.SOPInstanceUID);
-        default:
-          break;
+        }
       }
     }
     return TagW.UnknownTag;
@@ -906,20 +931,17 @@ public class TagD extends TagW {
 
     String unit;
     switch (value.charAt(value.length() - 1)) {
-      case 'Y': // NON-NLS
-        unit = ChronoUnit.YEARS.toString();
-        break;
-      case 'M': // NON-NLS
-        unit = ChronoUnit.MONTHS.toString();
-        break;
-      case 'W': // NON-NLS
-        unit = ChronoUnit.WEEKS.toString();
-        break;
-      case 'D': // NON-NLS
-        unit = ChronoUnit.DAYS.toString();
-        break;
-      default:
+      case 'Y' -> // NON-NLS
+          unit = ChronoUnit.YEARS.toString();
+      case 'M' -> // NON-NLS
+          unit = ChronoUnit.MONTHS.toString();
+      case 'W' -> // NON-NLS
+          unit = ChronoUnit.WEEKS.toString();
+      case 'D' -> // NON-NLS
+          unit = ChronoUnit.DAYS.toString();
+      default -> {
         return StringUtil.EMPTY_STRING;
+      }
     }
 
     // Remove the last character and leading 0

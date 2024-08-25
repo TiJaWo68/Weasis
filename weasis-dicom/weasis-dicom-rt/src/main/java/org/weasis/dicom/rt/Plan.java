@@ -12,13 +12,14 @@ package org.weasis.dicom.rt;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import org.weasis.core.api.media.data.TagW;
 import org.weasis.core.util.StringUtil;
+import org.weasis.dicom.codec.DicomMediaIO;
 
 /**
  * @author Tomas Skripcak
  */
-public class Plan {
-
+public class Plan extends RtSpecialElement {
   private String sopInstanceUid;
   private String label;
   private Date date;
@@ -26,7 +27,11 @@ public class Plan {
   private String description;
   private String geometry;
   private Double rxDose;
-  private List<Dose> doses = new ArrayList<>();
+  private final List<Dose> doses = new ArrayList<>();
+
+  public Plan(DicomMediaIO mediaIO) {
+    super(mediaIO);
+  }
 
   public String getSopInstanceUid() {
     return this.sopInstanceUid;
@@ -85,20 +90,12 @@ public class Plan {
   }
 
   public List<Dose> getDoses() {
-    return this.doses;
-  }
-
-  public void setDoses(List<Dose> doses) {
-    this.doses = doses;
-  }
-
-  public boolean hasAssociatedDose() {
-    return !this.doses.isEmpty();
+    return doses;
   }
 
   public Dose getFirstDose() {
-    if (!this.doses.isEmpty()) {
-      return this.doses.get(0);
+    if (!doses.isEmpty()) {
+      return doses.getFirst();
     }
 
     return null;
@@ -114,12 +111,12 @@ public class Plan {
 
   @Override
   public String toString() {
-    if (StringUtil.hasText(this.name)) {
-      return this.name;
-    } else if (StringUtil.hasText(this.label)) {
+    if (StringUtil.hasText(this.label)) {
       return this.label;
+    } else if (StringUtil.hasText(this.name)) {
+      return this.name;
     }
-    return StringUtil.EMPTY_STRING;
+    return TagW.NO_VALUE;
   }
 
   @Override

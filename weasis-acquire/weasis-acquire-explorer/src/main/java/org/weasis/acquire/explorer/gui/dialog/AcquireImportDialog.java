@@ -25,13 +25,14 @@ import javax.swing.JRadioButton;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
-import org.osgi.framework.FrameworkUtil;
 import org.osgi.service.prefs.Preferences;
 import org.weasis.acquire.explorer.AcquireExplorer;
 import org.weasis.acquire.explorer.Messages;
 import org.weasis.acquire.explorer.core.bean.SeriesGroup;
 import org.weasis.acquire.explorer.gui.control.ImportPanel;
+import org.weasis.core.api.gui.util.AppProperties;
 import org.weasis.core.api.gui.util.GuiUtils;
+import org.weasis.core.api.gui.util.WinUtil;
 import org.weasis.core.api.media.data.ImageElement;
 import org.weasis.core.api.service.BundlePreferences;
 import org.weasis.core.util.StringUtil;
@@ -70,8 +71,7 @@ public class AcquireImportDialog extends JDialog implements PropertyChangeListen
 
     int maxRange = 60;
     Preferences prefs =
-        BundlePreferences.getDefaultPreferences(
-            FrameworkUtil.getBundle(this.getClass()).getBundleContext());
+        BundlePreferences.getDefaultPreferences(AppProperties.getBundleContext(this.getClass()));
     if (prefs != null) {
       Preferences p = prefs.node(AcquireExplorer.PREFERENCE_NODE);
       maxRange = p.getInt(P_MAX_RANGE, maxRange);
@@ -171,7 +171,7 @@ public class AcquireImportDialog extends JDialog implements PropertyChangeListen
           } else {
             seriesType = null;
             JOptionPane.showMessageDialog(
-                this,
+                WinUtil.getValidComponent(this),
                 Messages.getString("AcquireImportDialog.add_name_msg"),
                 Messages.getString("AcquireImportDialog.add_name_title"),
                 JOptionPane.ERROR_MESSAGE);
@@ -186,7 +186,7 @@ public class AcquireImportDialog extends JDialog implements PropertyChangeListen
           Integer maxRangeInMinutes = (Integer) spinner.getValue();
           Preferences prefs =
               BundlePreferences.getDefaultPreferences(
-                  FrameworkUtil.getBundle(this.getClass()).getBundleContext());
+                  AppProperties.getBundleContext(this.getClass()));
           if (prefs != null) {
             Preferences p = prefs.node(AcquireExplorer.PREFERENCE_NODE);
             BundlePreferences.putIntPreferences(p, P_MAX_RANGE, maxRangeInMinutes);

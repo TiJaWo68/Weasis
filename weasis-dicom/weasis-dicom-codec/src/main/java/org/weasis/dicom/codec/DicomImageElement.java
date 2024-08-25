@@ -41,7 +41,6 @@ import org.weasis.core.api.gui.util.ActionW;
 import org.weasis.core.api.image.OpManager;
 import org.weasis.core.api.image.SimpleOpManager;
 import org.weasis.core.api.image.WindowOp;
-import org.weasis.core.api.image.ZoomOp;
 import org.weasis.core.api.image.util.Unit;
 import org.weasis.core.api.media.data.ImageElement;
 import org.weasis.core.api.media.data.TagW;
@@ -50,7 +49,6 @@ import org.weasis.dicom.codec.display.OverlayOp;
 import org.weasis.dicom.codec.display.ShutterOp;
 import org.weasis.dicom.codec.display.WindowAndPresetsOp;
 import org.weasis.dicom.codec.geometry.GeometryOfSlice;
-import org.weasis.dicom.codec.utils.DicomMediaUtils;
 import org.weasis.dicom.codec.utils.Ultrasound;
 import org.weasis.dicom.param.AttributeEditorContext;
 import org.weasis.opencv.data.ImageCV;
@@ -145,9 +143,9 @@ public class DicomImageElement extends ImageElement implements DicomElement {
           Ultrasound.getUniqueSpatialRegion(getMediaReader().getDicomObject());
       if (spatialCalibration != null) {
         Double calibX =
-            DicomMediaUtils.getDoubleFromDicomElement(spatialCalibration, Tag.PhysicalDeltaX, null);
+            DicomUtils.getDoubleFromDicomElement(spatialCalibration, Tag.PhysicalDeltaX, null);
         Double calibY =
-            DicomMediaUtils.getDoubleFromDicomElement(spatialCalibration, Tag.PhysicalDeltaY, null);
+            DicomUtils.getDoubleFromDicomElement(spatialCalibration, Tag.PhysicalDeltaY, null);
         if (calibX != null && calibY != null) {
           calibX = Math.abs(calibX);
           calibY = Math.abs(calibY);
@@ -179,8 +177,7 @@ public class DicomImageElement extends ImageElement implements DicomElement {
   private double[] getMagnifiedPixelSpacing(boolean useMagnificationFactor) {
     double[] val = TagD.getTagValue(mediaIO, Tag.ImagerPixelSpacing, double[].class);
     // Follows D. Clunie recommendations
-    pixelSizeCalibrationDescription =
-        val == null ? null : Messages.getString("DicomImageElement.detector");
+    pixelSizeCalibrationDescription = val == null ? null : "At Detector"; // NON-NLS
     if (useMagnificationFactor && val != null && val.length == 2 && val[0] > 0.0 && val[1] > 0.0) {
       Double estimatedFactor =
           TagD.getTagValue(mediaIO, Tag.EstimatedRadiographicMagnificationFactor, Double.class);
@@ -586,13 +583,7 @@ public class DicomImageElement extends ImageElement implements DicomElement {
         manager.setParamValue(OverlayOp.OP_NAME, OverlayOp.P_IMAGE_ELEMENT, this);
         manager.setParamValue(OverlayOp.OP_NAME, OverlayOp.P_SHOW, true);
       }
-
-      ZoomOp node = new ZoomOp();
-      node.setParam(ZoomOp.P_RATIO_X, getRescaleX() * ratio);
-      node.setParam(ZoomOp.P_RATIO_Y, getRescaleY() * ratio);
-      node.setParam(ZoomOp.P_INTERPOLATION, ZoomOp.Interpolation.BICUBIC);
-      manager.addImageOperationAction(node);
-
+      manager.addImageOperationAction(buildZoomOp(ratio));
       manager.setFirstNode(image);
     }
     return manager;
