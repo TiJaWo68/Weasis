@@ -111,7 +111,7 @@ jobs:
       - name: Build app binary with jpackage
         shell: bash
         env:
-          RES: "native-dist/weasis-native/weasis-distributions/script/resources/${{ matrix.wsystem }}"
+          RES: "native-dist/weasis-native/build/script/resources/${{ matrix.wsystem }}"
         run: |
           machine=${{ matrix.wsystem }}
           customOptions=("--java-options" "-splash:\$APPDIR/resources/images/about-round.png" )
@@ -132,8 +132,8 @@ jobs:
       - name: Build package with jpackage
         shell: bash
         env:
-          RES: "native-dist/weasis-native/weasis-distributions/script/resources/${{ matrix.wsystem }}"
-          FILE_ASSOC: "native-dist/weasis-native/weasis-distributions/script/file-associations.properties"
+          RES: "native-dist/weasis-native/build/script/resources/${{ matrix.wsystem }}"
+          FILE_ASSOC: "native-dist/weasis-native/build/script/file-associations.properties"
           VENDOR: "GammaView Team"
           COPYRIGHT: "© 2009-2025 GammaView Team"
         run: |
