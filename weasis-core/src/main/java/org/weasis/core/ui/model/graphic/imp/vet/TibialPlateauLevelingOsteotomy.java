@@ -140,10 +140,10 @@ public class TibialPlateauLevelingOsteotomy extends AbstractDragGraphic {
 			Unit displayUnit = view2d == null ? null : (Unit) view2d.getActionValue(ActionW.SPATIAL_UNIT.cmd());
 			MeasurementsAdapter ma = view2d.getMeasurableLayer().getMeasurementAdapter(displayUnit);
 			Point2D p = getHandlePoint(8);
-			double temp = centerPt[2].distance(p) * ma.getCalibRatio();
+			double temp = centerPt[2].distance(p) * ma.calibrationRatio();
 			if (temp < MaxSawRadius && temp > MinSawRadius) {
 				radius = (int) temp;
-				radiusPt[2] = radius / ma.getCalibRatio();
+				radiusPt[2] = radius / ma.calibrationRatio();
 			}
 		}
 	}
@@ -154,7 +154,7 @@ public class TibialPlateauLevelingOsteotomy extends AbstractDragGraphic {
 			MeasurementsAdapter ma = layer.getMeasurementAdapter(displayUnit);
 			ArrayList<MeasureItem> measVal = new ArrayList<>();
 			if (radius != null)
-				measVal.add(new MeasureItem(MEASUREMENT_LIST.get(0), radius, ma.getUnit()));
+				measVal.add(new MeasureItem(MEASUREMENT_LIST.get(0), radius, ma.unit()));
 			if (tpa != null)
 				measVal.add(new MeasureItem(MEASUREMENT_LIST.get(1), tpa, "°"));
 			return measVal;

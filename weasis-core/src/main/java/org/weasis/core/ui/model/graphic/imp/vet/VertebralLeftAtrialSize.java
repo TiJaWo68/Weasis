@@ -176,8 +176,8 @@ public class VertebralLeftAtrialSize extends AbstractDragGraphic {
 		if (layer != null && layer.hasContent() && isShapeValid()) {
 			MeasurementsAdapter adapter = layer.getMeasurementAdapter(displayUnit);
 
-			double ratio = adapter.getCalibRatio();
-			String unitStr = adapter.getUnit();
+			double ratio = adapter.calibrationRatio();
+			String unitStr = adapter.unit();
 
 			if (adapter != null) {
 				double averageVertebra = points[0].distance(points[1]) / 5;

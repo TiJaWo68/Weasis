@@ -105,8 +105,8 @@ public class HipDysplasia extends AbstractDragGraphic {
 			for (int i = 0; i < 2; i++)
 				measVal.add(new MeasureItem(MEASUREMENT_LIST.get(i), angleDeg[i], "°"));
 			if (Objects.nonNull(centerPt[0]) && Objects.nonNull(centerPt[1])) {
-				femoralHeadDistance = centerPt[0].distance(centerPt[1]) * adapter.getCalibRatio();
-				measVal.add(new MeasureItem(MEASUREMENT_LIST.get(2), femoralHeadDistance, adapter.getUnit()));
+				femoralHeadDistance = centerPt[0].distance(centerPt[1]) * adapter.calibrationRatio();
+				measVal.add(new MeasureItem(MEASUREMENT_LIST.get(2), femoralHeadDistance, adapter.unit()));
 			}
 			return measVal;
 		}
