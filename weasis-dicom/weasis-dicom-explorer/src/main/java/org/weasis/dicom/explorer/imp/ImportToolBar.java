@@ -30,6 +30,7 @@ import org.weasis.core.ui.util.DefaultAction;
 import org.weasis.core.ui.util.WtoolBar;
 import org.weasis.core.util.StringUtil;
 import org.weasis.dicom.explorer.DicomModel;
+import org.weasis.dicom.explorer.GammaViewConfig;
 import org.weasis.dicom.explorer.HangingProtocols.OpeningViewer;
 import org.weasis.dicom.explorer.LoadDicomDir;
 import org.weasis.dicom.explorer.Messages;
