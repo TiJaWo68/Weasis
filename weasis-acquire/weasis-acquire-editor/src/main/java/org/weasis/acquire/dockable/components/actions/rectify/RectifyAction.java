@@ -75,7 +75,7 @@ public class RectifyAction extends AbstractAcquireAction {
             });
 
     for (GraphicLayer layer : new ArrayList<>(model.getLayers())) {
-      if (LangUtil.getNULLtoFalse(layer.getSerializable())) {
+      if (LangUtil.nullToFalse(layer.getSerializable())) {
         model.deleteByLayer(layer);
       }
     }

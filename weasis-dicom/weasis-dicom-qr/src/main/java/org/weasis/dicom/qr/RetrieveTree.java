@@ -15,7 +15,7 @@ import java.awt.Component;
 import java.util.Objects;
 import javax.swing.JPanel;
 import org.weasis.dicom.explorer.DicomModel;
-import org.weasis.dicom.explorer.ExportTree;
+import org.weasis.dicom.explorer.exp.ExportTree;
 
 public class RetrieveTree extends JPanel {
 

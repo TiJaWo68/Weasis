@@ -13,9 +13,9 @@ import java.util.Collections;
 import java.util.List;
 import javax.swing.tree.DefaultMutableTreeNode;
 import org.weasis.core.api.media.data.Series;
-import org.weasis.dicom.explorer.CheckTreeModel;
 import org.weasis.dicom.explorer.DicomModel;
 import org.weasis.dicom.explorer.DicomSorter;
+import org.weasis.dicom.explorer.exp.CheckTreeModel;
 
 public class RetrieveTreeModel extends CheckTreeModel {
 

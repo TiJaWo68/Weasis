@@ -68,14 +68,14 @@ public class ManifestBuilder {
       writeExtendedManifest(arcQuery, buf);
       buf.flush();
     } catch (IOException e) {
-      FileUtil.delete(outFile);
+      FileUtil.delete(outFile.toPath());
       throw new IOException(e);
     }
   }
 
   private static void writeExtendedManifest(ArcQuery arcQuery, Writer buf) throws IOException {
-    arcQuery.writeHeader(buf);
-    arcQuery.writeArcQueries(buf);
+    arcQuery.writeManifestRoot(buf);
+    arcQuery.writeArchiveQueries(buf);
 
     List<KOSpecialElement> koEditable = new ArrayList<>();
     List<DicomImageElement> images = new ArrayList<>();
@@ -114,6 +114,6 @@ public class ManifestBuilder {
 
     KOSpecialElement.writeSelection(koEditable, buf);
 
-    arcQuery.writeEndOfDocument(buf);
+    arcQuery.writeDocumentEnd(buf);
   }
 }

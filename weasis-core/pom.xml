@@ -16,8 +16,7 @@
   <packaging>jar</packaging>
 
   <properties>
-    <xchart.version>3.8.8</xchart.version>
-    <LGoodDatePicker.version>11.3.0-r1</LGoodDatePicker.version>
+    <xchart.version>4.0.2</xchart.version>
     <lablib-checkboxtree.version>4.0</lablib-checkboxtree.version>
     <VectorGraphics2D.version>0.13</VectorGraphics2D.version>
   </properties>
@@ -34,7 +33,7 @@
               <goal>copy-dependencies</goal>
             </goals>
             <configuration>
-              <includeArtifactIds>scribejava-core,scribejava-java8,lablib-checkboxtree,jxlayer,LGoodDatePicker,xchart,VectorGraphics2D</includeArtifactIds>
+              <includeArtifactIds>scribejava-core,scribejava-java8,lablib-checkboxtree,xchart,VectorGraphics2D</includeArtifactIds>
             </configuration>
           </execution>
         </executions>
@@ -48,11 +47,11 @@
             -includeresource.all: lib/=target/dependency/;filter:=!lablib*.jar;lib:=true
             Import-Package: org.slf4j;version=!,ch.qos.logback.*;version=!,\
             !org.apache.commons.codec.binary;resolution:=optional,com.madgag.gif.fmsware;resolution:=optional,de.rototor.pdfbox.graphics2d;\
-            resolution:=optional,org.apache.pdfbox.pdmodel.*;resolution:=optional,\
+            resolution:=optional,org.apache.pdfbox.pdmodel.*;resolution:=optional,org.scilab.forge.jlatexmath.*;resolution:=optional,\
             !sun.swing,*
             Export-Package: !org.weasis.core.internal,!org.weasis.core.util,org.weasis.core.*
-            -exportcontents: com.github.scribejava.*,eu.essilab.lablib.checkboxtree.*,com.github.lgooddatepicker.*,\
-            com.privatejgoodies.*,org.knowm.xchart.*,de.erichseifert.*
+            -exportcontents: com.github.scribejava.*,eu.essilab.lablib.checkboxtree.*,\
+            org.knowm.xchart.*,de.erichseifert.*
           </bnd>
         </configuration>
       </plugin>
@@ -86,11 +85,27 @@
       <groupId>com.github.scribejava</groupId>
       <artifactId>scribejava-core</artifactId>
       <version>${scribejava.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-databind</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.github.scribejava</groupId>
       <artifactId>scribejava-java8</artifactId>
       <version>${scribejava.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-databind</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
     </dependency>
     <dependency>
       <groupId>org.weasis.thirdparty</groupId>
@@ -100,11 +115,6 @@
       <groupId>eu.essilab</groupId>
       <artifactId>lablib-checkboxtree</artifactId>
       <version>${lablib-checkboxtree.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.github.lgooddatepicker</groupId>
-      <artifactId>LGoodDatePicker</artifactId>
-      <version>${LGoodDatePicker.version}</version>
     </dependency>
     <dependency>
       <groupId>org.knowm.xchart</groupId>

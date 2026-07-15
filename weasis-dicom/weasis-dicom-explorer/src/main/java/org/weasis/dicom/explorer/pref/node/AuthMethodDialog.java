@@ -9,6 +9,7 @@
  */
 package org.weasis.dicom.explorer.pref.node;
 
+import java.awt.FlowLayout;
 import java.awt.Window;
 import java.util.UUID;
 import javax.swing.BorderFactory;
@@ -22,14 +23,14 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.border.Border;
 import net.miginfocom.swing.MigLayout;
-import org.weasis.core.api.auth.AuthMethod;
-import org.weasis.core.api.auth.AuthProvider;
-import org.weasis.core.api.auth.AuthRegistration;
-import org.weasis.core.api.auth.DefaultAuthMethod;
-import org.weasis.core.api.auth.OAuth2ServiceFactory;
 import org.weasis.core.api.gui.util.GuiUtils;
 import org.weasis.core.api.gui.util.WinUtil;
-import org.weasis.core.api.util.NetworkUtil;
+import org.weasis.core.api.net.NetworkUtil;
+import org.weasis.core.api.net.auth.AuthMethod;
+import org.weasis.core.api.net.auth.AuthProvider;
+import org.weasis.core.api.net.auth.AuthRegistration;
+import org.weasis.core.api.net.auth.DefaultAuthMethod;
+import org.weasis.core.api.net.auth.OAuth2ServiceFactory;
 import org.weasis.core.util.StringUtil;
 import org.weasis.dicom.explorer.Messages;
 
@@ -48,13 +49,15 @@ public class AuthMethodDialog extends JDialog {
   private final JTextField clientSecret = new JTextField(50);
   private final JTextField scope = new JTextField(50);
   private final JTextField audience = new JTextField(50);
+  private final JComboBox<String> grantType =
+      new JComboBox<>(new String[] {AuthRegistration.CODE, AuthRegistration.CLIENT_CREDENTIALS});
 
   public AuthMethodDialog(
       Window parent, String title, AuthMethod authMethod, JComboBox<AuthMethod> parentCombobox) {
     super(parent, title, ModalityType.APPLICATION_MODAL);
     this.parentCombobox = parentCombobox;
-    comboBoxAuth.addItem(OAuth2ServiceFactory.googleAuthTemplate);
-    comboBoxAuth.addItem(OAuth2ServiceFactory.keycloakTemplate);
+    comboBoxAuth.addItem(OAuth2ServiceFactory.GOOGLE_AUTH_TEMPLATE);
+    comboBoxAuth.addItem(OAuth2ServiceFactory.KEYCLOAK_TEMPLATE);
     boolean addAuth = false;
     if (authMethod == null) {
       addAuth = true;
@@ -62,7 +65,7 @@ public class AuthMethodDialog extends JDialog {
           new DefaultAuthMethod(
               UUID.randomUUID().toString(),
               new AuthProvider(null, null, null, null, false),
-              new AuthRegistration());
+              AuthRegistration.empty());
       this.authMethod.setLocal(true);
     } else {
       this.authMethod = authMethod;
@@ -93,8 +96,18 @@ public class AuthMethodDialog extends JDialog {
     okButton.addActionListener(e -> okButtonActionPerformed());
     JButton cancelButton = new JButton(Messages.getString("PrinterDialog.cancel"));
     cancelButton.addActionListener(e -> dispose());
-    panel.add(okButton, "newline, skip, growx 0, alignx trailing"); // NON-NLS
-    panel.add(cancelButton, "gap 15lp 0lp 10lp 10lp"); // NON-NLS
+    JButton helpButton = GuiUtils.createHelpButton("dicomweb-config"); // NON-NLS
+    panel.add(
+        GuiUtils.getFlowLayoutPanel(
+            FlowLayout.TRAILING,
+            0,
+            0,
+            helpButton,
+            GuiUtils.boxHorizontalStrut(15),
+            okButton,
+            GuiUtils.boxHorizontalStrut(15),
+            cancelButton),
+        "newline, spanx, gap 15lp 0lp 10lp 10lp, alignx trailing"); // NON-NLS
   }
 
   public void buildHeader(JPanel panel) {
@@ -103,7 +116,7 @@ public class AuthMethodDialog extends JDialog {
     buttonFill.addActionListener(
         e -> {
           AuthMethod m = (AuthMethod) comboBoxAuth.getSelectedItem();
-          if (OAuth2ServiceFactory.keycloakTemplate.equals(m)) {
+          if (OAuth2ServiceFactory.KEYCLOAK_TEMPLATE.equals(m)) {
             JTextField textFieldName = new JTextField();
             JTextField textFieldURL = new JTextField();
             JTextField textFieldRealm = new JTextField();
@@ -171,6 +184,8 @@ public class AuthMethodDialog extends JDialog {
         BorderFactory.createCompoundBorder(
             spaceY, GuiUtils.getTitledBorder("Registration"))); // NON-NLS
 
+    panel.add(new JLabel("Grant Type" + StringUtil.COLON), GuiUtils.NEWLINE); // NON-NLS
+    panel.add(grantType, "");
     panel.add(new JLabel("Client ID" + StringUtil.COLON), GuiUtils.NEWLINE); // NON-NLS
     panel.add(clientID, "");
     panel.add(new JLabel("Client Secret" + StringUtil.COLON), GuiUtils.NEWLINE); // NON-NLS
@@ -185,17 +200,18 @@ public class AuthMethodDialog extends JDialog {
   private void fill(AuthMethod authMethod) {
     if (authMethod != null) {
       AuthProvider provider = authMethod.getAuthProvider();
-      name.setText(provider.getName());
-      authorizationURI.setText(provider.getAuthorizationUri());
-      tokenURI.setText(provider.getTokenUri());
-      revokeTokenURI.setText(provider.getRevokeTokenUri());
-      oidc.setSelected(provider.getOpenId());
+      name.setText(provider.name());
+      authorizationURI.setText(provider.authorizationUri());
+      tokenURI.setText(provider.tokenUri());
+      revokeTokenURI.setText(provider.revokeTokenUri());
+      oidc.setSelected(provider.openId());
 
       AuthRegistration reg = authMethod.getAuthRegistration();
-      clientID.setText(reg.getClientId());
-      clientSecret.setText(reg.getClientSecret());
-      scope.setText(reg.getScope());
-      audience.setText(reg.getAudience());
+      clientID.setText(reg.clientId());
+      clientSecret.setText(reg.clientSecret());
+      scope.setText(reg.scope());
+      audience.setText(reg.audience());
+      grantType.setSelectedItem(reg.getAuthorizationGrantType());
     }
   }
 
@@ -218,28 +234,57 @@ public class AuthMethodDialog extends JDialog {
       return;
     }
 
-    AuthProvider provider = authMethod.getAuthProvider();
-    boolean addMethod = provider.getName() == null;
-    provider.setName(n);
-    provider.setAuthorizationUri(authURI);
-    provider.setTokenUri(tURI);
-    provider.setRevokeTokenUri(rURI);
-    provider.setOpenId(oidc.isSelected());
+    // Create new AuthProvider since it's a record (immutable)
+    AuthProvider currentProvider = authMethod.getAuthProvider();
+    boolean addMethod = currentProvider.name() == null;
+    AuthProvider newProvider = new AuthProvider(n, authURI, tURI, rURI, oidc.isSelected());
+
+    // Create new AuthRegistration since it's a record (immutable)
+    DefaultAuthMethod updatedAuth = updateAuthMethod(newProvider);
+
+    // Update the parent combobox
+    if (addMethod) {
+      parentCombobox.addItem(updatedAuth);
+      parentCombobox.setSelectedItem(updatedAuth);
+    } else {
+      // Replace the existing item in the combobox
+      int index = -1;
+      for (int i = 0; i < parentCombobox.getItemCount(); i++) {
+        if (parentCombobox.getItemAt(i).getUid().equals(authMethod.getUid())) {
+          index = i;
+          break;
+        }
+      }
+      if (index >= 0) {
+        parentCombobox.removeItemAt(index);
+        parentCombobox.insertItemAt(updatedAuth, index);
+        parentCombobox.setSelectedIndex(index);
+      }
+    }
 
     comboBoxAuth.repaint();
 
-    AuthRegistration reg = authMethod.getAuthRegistration();
-    reg.setClientId(clientID.getText());
-    reg.setClientSecret(clientSecret.getText());
-    reg.setScope(scope.getText());
-    reg.setAudience(audience.getText());
+    // Persist so the new/edited method is still available the next time any dialog reopens.
+    AuthenticationPersistence.addOrUpdateMethod(updatedAuth);
 
-    if (addMethod) {
-      parentCombobox.addItem(authMethod);
-      parentCombobox.setSelectedItem(authMethod);
-    }
-    AuthenticationPersistence.getMethods().put(authMethod.getUid(), authMethod);
-    AuthenticationPersistence.saveMethod();
     dispose();
+  }
+
+  private DefaultAuthMethod updateAuthMethod(AuthProvider newProvider) {
+    AuthRegistration newRegistration =
+        new AuthRegistration(
+            clientID.getText(),
+            clientSecret.getText(),
+            scope.getText(),
+            audience.getText(),
+            authMethod.getAuthRegistration().user(), // preserve existing user
+            (String) grantType.getSelectedItem());
+
+    // Since AuthMethod implementations might be immutable too, we need to handle this properly
+    DefaultAuthMethod updatedAuth =
+        new DefaultAuthMethod(authMethod.getUid(), newProvider, newRegistration);
+    updatedAuth.setLocal(authMethod.isLocal());
+    updatedAuth.setCode(authMethod.getCode());
+    return updatedAuth;
   }
 }

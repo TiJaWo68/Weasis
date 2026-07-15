@@ -14,6 +14,8 @@ import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -36,8 +38,8 @@ import org.weasis.core.api.media.data.MediaSeriesGroup;
 import org.weasis.core.api.media.data.MediaSeriesGroupNode;
 import org.weasis.core.api.media.data.Series;
 import org.weasis.core.api.media.data.TagW;
+import org.weasis.core.api.net.URLParameters;
 import org.weasis.core.api.util.ResourceUtil;
-import org.weasis.core.api.util.URLParameters;
 import org.weasis.core.ui.tp.raven.spinner.SpinnerProgress;
 import org.weasis.core.util.FileUtil;
 import org.weasis.core.util.StringUtil;
@@ -46,9 +48,9 @@ import org.weasis.dicom.codec.TagD;
 import org.weasis.dicom.codec.utils.DicomResource;
 import org.weasis.dicom.codec.utils.SeriesInstanceList;
 import org.weasis.dicom.explorer.DicomModel;
-import org.weasis.dicom.explorer.ExplorerTask;
 import org.weasis.dicom.explorer.LoadLocalDicom;
 import org.weasis.dicom.explorer.PluginOpeningStrategy;
+import org.weasis.dicom.explorer.exp.ExplorerTask;
 import org.weasis.dicom.explorer.pref.download.DicomExplorerPrefView;
 import org.weasis.dicom.explorer.pref.node.AbstractDicomNode;
 import org.weasis.dicom.explorer.pref.node.AbstractDicomNode.RetrieveType;
@@ -74,7 +76,7 @@ import org.weasis.dicom.param.DicomState;
 import org.weasis.dicom.param.ListenerParams;
 import org.weasis.dicom.qr.manisfest.CFindQueryResult;
 import org.weasis.dicom.tool.DicomListener;
-import org.weasis.dicom.web.Multipart;
+import org.weasis.dicom.web.MultipartConstants;
 
 public class RetrieveTask extends ExplorerTask<ExplorerTask<Boolean, String>, String> {
   private static final Logger LOGGER = LoggerFactory.getLogger(RetrieveTask.class);
@@ -119,7 +121,7 @@ public class RetrieveTask extends ExplorerTask<ExplorerTask<Boolean, String>, St
 
     DicomParam[] dcmParams = {new DicomParam(Tag.StudyInstanceUID, studies.toArray(new String[0]))};
 
-    File tempFolder = null;
+    Path tempFolder = null;
     Object selectedItem = dicomQrView.getComboDestinationNode().getSelectedItem();
     if (selectedItem instanceof final DefaultDicomNode node) {
       DefaultDicomNode callingNode =
@@ -150,11 +152,11 @@ public class RetrieveTask extends ExplorerTask<ExplorerTask<Boolean, String>, St
           openingStrategy.setFullImportSession(false);
           progress.addProgressListener(
               p -> {
-                File current = p.getProcessedFile();
+                Path current = p.getProcessedFile();
                 if (current != null && p.getAttributes() == null) {
                   LoadLocalDicom task =
                       new LoadLocalDicom(
-                          new File[] {current}, false, explorerDcmModel, openingStrategy);
+                          new File[] {current.toFile()}, false, explorerDcmModel, openingStrategy);
                   DicomModel.LOADING_EXECUTOR.execute(task);
                 }
               });
@@ -237,11 +239,11 @@ public class RetrieveTask extends ExplorerTask<ExplorerTask<Boolean, String>, St
           } else {
             List<String> xmlFiles = new ArrayList<>(1);
             try {
-              File tempFile = File.createTempFile("wado_", ".xml", AppProperties.APP_TEMP_DIR);
+              Path tempFile = Files.createTempFile(AppProperties.APP_TEMP_DIR, "wado_", ".xml");
               FileUtil.writeStreamWithIOException(
                   new ByteArrayInputStream(wadoXmlGenerated.getBytes(StandardCharsets.UTF_8)),
                   tempFile);
-              xmlFiles.add(tempFile.getPath());
+              xmlFiles.add(tempFile.toString());
 
             } catch (Exception e) {
               LOGGER.info("ungzip manifest", e);
@@ -388,9 +390,9 @@ public class RetrieveTask extends ExplorerTask<ExplorerTask<Boolean, String>, St
     retrieveNode.getHeaders().forEach(wadoParameters::addHttpTag);
     wadoParameters.addHttpTag(
         "Accept", // NON-NLS
-        Multipart.MULTIPART_RELATED
+        MultipartConstants.MULTIPART_RELATED
             + ";type=\"" // NON-NLS
-            + Multipart.ContentType.DICOM // NON-NLS
+            + MultipartConstants.DicomContentType.DICOM // NON-NLS
             + "\";"
             + props.getProperty(RsQueryParams.P_ACCEPT_EXT));
 

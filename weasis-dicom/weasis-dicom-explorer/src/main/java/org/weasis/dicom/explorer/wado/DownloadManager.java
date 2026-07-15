@@ -10,11 +10,12 @@
 package org.weasis.dicom.explorer.wado;
 
 import java.io.BufferedInputStream;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -45,7 +46,6 @@ import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.weasis.core.api.auth.AuthMethod;
 import org.weasis.core.api.explorer.ObservableEvent;
 import org.weasis.core.api.gui.util.AppProperties;
 import org.weasis.core.api.gui.util.GuiExecutor;
@@ -57,11 +57,12 @@ import org.weasis.core.api.media.data.MediaSeriesGroupNode;
 import org.weasis.core.api.media.data.TagUtil;
 import org.weasis.core.api.media.data.TagW;
 import org.weasis.core.api.media.data.Thumbnail;
+import org.weasis.core.api.net.ClosableURLConnection;
+import org.weasis.core.api.net.NetworkUtil;
+import org.weasis.core.api.net.URLParameters;
+import org.weasis.core.api.net.auth.AuthMethod;
 import org.weasis.core.api.util.BiConsumerWithException;
-import org.weasis.core.api.util.ClosableURLConnection;
-import org.weasis.core.api.util.NetworkUtil;
 import org.weasis.core.api.util.ThreadUtil;
-import org.weasis.core.api.util.URLParameters;
 import org.weasis.core.ui.editor.image.ViewerPlugin;
 import org.weasis.core.ui.model.GraphicModel;
 import org.weasis.core.ui.model.ReferencedImage;
@@ -70,6 +71,7 @@ import org.weasis.core.ui.serialize.XmlSerializer;
 import org.weasis.core.ui.util.ColorLayerUI;
 import org.weasis.core.util.FileUtil;
 import org.weasis.core.util.StreamIOException;
+import org.weasis.core.util.StreamUtil;
 import org.weasis.core.util.StringUtil;
 import org.weasis.core.util.StringUtil.Suffix;
 import org.weasis.dicom.codec.DicomSeries;
@@ -84,7 +86,6 @@ import org.weasis.dicom.explorer.DicomSorter;
 import org.weasis.dicom.explorer.HangingProtocols.OpeningViewer;
 import org.weasis.dicom.explorer.LoadDicomObjects;
 import org.weasis.dicom.explorer.Messages;
-import org.weasis.dicom.explorer.pref.download.DicomExplorerPrefView;
 import org.weasis.dicom.explorer.pref.node.AbstractDicomNode;
 import org.weasis.dicom.explorer.pref.node.DicomWebNode;
 import org.weasis.dicom.explorer.pref.node.DicomWebNode.WebType;
@@ -101,6 +102,12 @@ import org.xml.sax.SAXException;
 public class DownloadManager {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DownloadManager.class);
+
+  public enum Status {
+    DOWNLOADING,
+    COMPLETE,
+    ERROR
+  }
 
   public static final String CONCURRENT_SERIES = "download.concurrent.series";
   private static final List<LoadSeries> TASKS = new ArrayList<>();
@@ -160,11 +167,7 @@ public class DownloadManager {
   }
 
   public static OpeningViewer getOpeningViewer() {
-    String key =
-        GuiUtils.getUICore()
-            .getSystemPreferences()
-            .getProperty(DicomExplorerPrefView.DOWNLOAD_OPEN_MODE);
-    return OpeningViewer.getOpeningViewer(key, OpeningViewer.ALL_PATIENTS);
+    return OpeningViewer.ALL_PATIENTS;
   }
 
   public static boolean removeSeriesInQueue(final LoadSeries series) {
@@ -313,24 +316,25 @@ public class DownloadManager {
         stream = urlInputStream;
       } else {
         // In case wado file has no extension
-        File outFile = File.createTempFile("wado_", "", AppProperties.APP_TEMP_DIR); // NON-NLS
+        Path outFile = Files.createTempFile(AppProperties.APP_TEMP_DIR, "wado_", ""); // NON-NLS
         FileUtil.writeStreamWithIOException(urlInputStream, outFile);
         if (MimeInspector.isMatchingMimeTypeFromMagicNumber(
-            outFile, "application/x-gzip")) { // NON-NLS
-          stream = new BufferedInputStream(new GZIPInputStream(new FileInputStream(outFile)));
+            outFile.toFile(), "application/x-gzip")) { // NON-NLS
+          stream =
+              new BufferedInputStream(new GZIPInputStream(new FileInputStream(outFile.toFile())));
         } else {
-          stream = new FileInputStream(outFile);
+          stream = new FileInputStream(outFile.toFile());
         }
       }
 
-      File tempFile;
+      Path tempFile;
       if (uri.toString().startsWith("file:") && path.endsWith(".xml")) { // NON-NLS
-        tempFile = new File(path);
+        tempFile = Path.of(path);
       } else {
-        tempFile = File.createTempFile("wado_", ".xml", AppProperties.APP_TEMP_DIR); // NON-NLS
+        tempFile = Files.createTempFile(AppProperties.APP_TEMP_DIR, "wado_", ".xml"); // NON-NLS
         FileUtil.writeStreamWithIOException(stream, tempFile);
       }
-      xmler = factory.createXMLStreamReader(new FileInputStream(tempFile));
+      xmler = factory.createXMLStreamReader(new FileInputStream(tempFile.toFile()));
 
       Source xmlFile = new StAXSource(xmler);
       SchemaFactory schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
@@ -350,7 +354,7 @@ public class DownloadManager {
 
       ReaderParams params = new ReaderParams(model, seriesMap);
       // Try to read the xml even it is not valid.
-      xmler = factory.createXMLStreamReader(new FileInputStream(tempFile));
+      xmler = factory.createXMLStreamReader(new FileInputStream(tempFile.toFile()));
 
       BiConsumerWithException<XMLStreamReader, ReaderParams, XMLStreamException> method =
           (x, r) -> {
@@ -377,7 +381,7 @@ public class DownloadManager {
             } else {
               // Read old manifest: xmlns="http://www.weasis.org/xsd"
               if (WadoParameters.TAG_WADO_QUERY.equals(key)) {
-                readWadoQuery(x, r);
+                readLegacyWadoQuery(x, r);
               }
             }
           };
@@ -408,17 +412,16 @@ public class DownloadManager {
             }
           });
     } finally {
-      FileUtil.safeClose(xmler);
-      FileUtil.safeClose(stream);
+      StreamUtil.safeClose(xmler);
+      StreamUtil.safeClose(stream);
     }
     return seriesMap.values();
   }
 
   private static String getErrorMessage(URI uri) {
-    StringBuilder buf = new StringBuilder(Messages.getString("DownloadManager.error_load_xml"));
-    buf.append(StringUtil.COLON_AND_SPACE);
-    buf.append(uri.toString());
-    return buf.toString();
+    return Messages.getString("DownloadManager.error_load_xml")
+        + StringUtil.COLON_AND_SPACE
+        + uri.toString();
   }
 
   private static void readArcQuery(XMLStreamReader xmler, ReaderParams params)
@@ -430,17 +433,19 @@ public class DownloadManager {
             TagUtil.getTagAttribute(
                 xmler, WadoParameters.WADO_ONLY_SOP_UID, Boolean.FALSE.toString()));
     String additionalParameters =
-        TagUtil.getTagAttribute(xmler, ArcParameters.ADDITIONNAL_PARAMETERS, "");
+        TagUtil.getTagAttribute(xmler, ArcParameters.ADDITIONAL_PARAMETERS, "");
     String overrideList = TagUtil.getTagAttribute(xmler, ArcParameters.OVERRIDE_TAGS, null);
     String webLogin = TagUtil.getTagAttribute(xmler, ArcParameters.WEB_LOGIN, null);
+    String queryMode = TagUtil.getTagAttribute(xmler, ArcParameters.QUERY_MODE, null);
+    boolean wadoRs = "DICOM_WEB".equals(queryMode); // NON-NLS
     final WadoParameters wadoParameters =
         new WadoParameters(
-            arcID, wadoURL, onlySopUID, additionalParameters, overrideList, webLogin);
+            arcID, wadoURL, onlySopUID, additionalParameters, overrideList, webLogin, wadoRs);
     params.wadoUri = getWadoUrl(wadoURL);
     readQuery(xmler, params, wadoParameters, ArcParameters.TAG_ARC_QUERY);
   }
 
-  private static void readWadoQuery(XMLStreamReader xmler, ReaderParams params)
+  private static void readLegacyWadoQuery(XMLStreamReader xmler, ReaderParams params)
       throws XMLStreamException {
     String wadoURL = TagUtil.getTagAttribute(xmler, WadoParameters.WADO_URL, null);
     boolean onlySopUID =
@@ -448,15 +453,11 @@ public class DownloadManager {
             TagUtil.getTagAttribute(
                 xmler, WadoParameters.WADO_ONLY_SOP_UID, Boolean.FALSE.toString()));
     String additionalParameters =
-        TagUtil.getTagAttribute(xmler, ArcParameters.ADDITIONNAL_PARAMETERS, "");
+        TagUtil.getTagAttribute(xmler, ArcParameters.ADDITIONAL_PARAMETERS, "");
     String overrideList = TagUtil.getTagAttribute(xmler, ArcParameters.OVERRIDE_TAGS, null);
-    String queryMode = TagUtil.getTagAttribute(xmler, "queryMode", null);
-    // TODO replace with enum in library
-    boolean wadoRs = "DICOM_WEB".equals(queryMode); // NON-NLS
     String webLogin = TagUtil.getTagAttribute(xmler, ArcParameters.WEB_LOGIN, null);
     final WadoParameters wadoParameters =
-        new WadoParameters(
-            "", wadoURL, onlySopUID, additionalParameters, overrideList, webLogin, wadoRs);
+        new WadoParameters("", wadoURL, onlySopUID, additionalParameters, overrideList, webLogin);
     params.wadoUri = getWadoUrl(wadoURL);
     readQuery(xmler, params, wadoParameters, WadoParameters.TAG_WADO_QUERY);
   }

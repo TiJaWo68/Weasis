@@ -41,8 +41,8 @@ import org.slf4j.LoggerFactory;
 import org.weasis.core.api.media.data.TagReadable;
 import org.weasis.core.api.media.data.TagUtil;
 import org.weasis.core.api.media.data.TagW;
-import org.weasis.core.util.FileUtil;
 import org.weasis.core.util.LangUtil;
+import org.weasis.core.util.StreamUtil;
 import org.weasis.core.util.StringUtil;
 import org.weasis.dicom.codec.utils.DicomMediaUtils;
 
@@ -579,8 +579,8 @@ public class TagD extends TagW {
     } catch (Exception e) {
       LOGGER.error("Cannot read dataelements.xml! ", e);
     } finally {
-      FileUtil.safeClose(xmler);
-      FileUtil.safeClose(stream);
+      StreamUtil.safeClose(xmler);
+      StreamUtil.safeClose(stream);
     }
     return map;
   }
@@ -643,7 +643,7 @@ public class TagD extends TagW {
                           vmMin,
                           vmMax,
                           defaultValue,
-                          LangUtil.getEmptytoFalse(retired));
+                          LangUtil.emptyToFalse(retired));
                 } else {
                   t =
                       new TagD(
@@ -655,7 +655,7 @@ public class TagD extends TagW {
                           vmMin,
                           vmMax,
                           defaultValue,
-                          LangUtil.getEmptytoFalse(retired));
+                          LangUtil.emptyToFalse(retired));
                 }
                 TagW.addTag(t);
               } catch (Exception e) {

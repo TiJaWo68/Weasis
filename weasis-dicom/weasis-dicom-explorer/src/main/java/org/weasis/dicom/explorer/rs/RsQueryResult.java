@@ -28,15 +28,15 @@ import org.dcm4che3.json.JSONReader;
 import org.dcm4che3.json.JSONReader.Callback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.weasis.core.api.auth.AuthMethod;
 import org.weasis.core.api.gui.util.GuiUtils;
 import org.weasis.core.api.media.data.MediaSeriesGroup;
 import org.weasis.core.api.media.data.MediaSeriesGroupNode;
 import org.weasis.core.api.media.data.Series;
 import org.weasis.core.api.media.data.TagW;
-import org.weasis.core.api.util.HttpResponse;
-import org.weasis.core.api.util.NetworkUtil;
-import org.weasis.core.api.util.URLParameters;
+import org.weasis.core.api.net.HttpStream;
+import org.weasis.core.api.net.HttpUtils;
+import org.weasis.core.api.net.URLParameters;
+import org.weasis.core.api.net.auth.AuthMethod;
 import org.weasis.core.util.LangUtil;
 import org.weasis.core.util.StringUtil;
 import org.weasis.dicom.codec.DicomSeries;
@@ -51,13 +51,14 @@ import org.weasis.dicom.explorer.wado.LoadSeries;
 import org.weasis.dicom.mf.AbstractQueryResult;
 import org.weasis.dicom.mf.SopInstance;
 import org.weasis.dicom.mf.WadoParameters;
-import org.weasis.dicom.web.Multipart;
+import org.weasis.dicom.web.MultipartConstants;
+import org.weasis.dicom.web.MultipartConstants.DicomContentType;
 
 public class RsQueryResult extends AbstractQueryResult {
   private static final Logger LOGGER = LoggerFactory.getLogger(RsQueryResult.class);
 
   private static final boolean MULTIPLE_PARAMS =
-      LangUtil.getEmptytoFalse(System.getProperty("dicom.qido.query.multi.params"));
+      LangUtil.emptyToFalse(System.getProperty("dicom.qido.query.multi.params"));
   public static final String STUDY_QUERY =
       multiParams(
           "&includefield=00080020,00080030,00080050,00080061,00080090,00081030,00100010,00100020,00100021,00100030,00100040,0020000D,00200010"); // NON-NLS
@@ -79,9 +80,9 @@ public class RsQueryResult extends AbstractQueryResult {
     // Accept only multipart/related and retrieve dicom at the stored syntax
     wadoParameters.addHttpTag(
         "Accept", // NON-NLS
-        Multipart.MULTIPART_RELATED
+        MultipartConstants.MULTIPART_RELATED
             + ";type=\"" // NON-NLS
-            + Multipart.ContentType.DICOM
+            + DicomContentType.DICOM
             + "\";"
             + rsQueryParams.getProperties().getProperty(RsQueryParams.P_ACCEPT_EXT));
     defaultStartDownloading =
@@ -137,7 +138,7 @@ public class RsQueryResult extends AbstractQueryResult {
   public static List<Attributes> parseJSON(
       String url, AuthMethod authMethod, URLParameters urlParameters) throws Exception {
     List<Attributes> items = new ArrayList<>();
-    try (HttpResponse response = NetworkUtil.getHttpResponse(url, urlParameters, authMethod);
+    try (HttpStream response = HttpUtils.getHttpResponse(url, urlParameters, authMethod);
         InputStreamReader instream =
             new InputStreamReader(response.getInputStream(), StandardCharsets.UTF_8)) {
       int code = response.getResponseCode();
@@ -341,7 +342,7 @@ public class RsQueryResult extends AbstractQueryResult {
 
   public void buildFromSeriesInstanceUID(List<String> seriesInstanceUIDs) {
     boolean wholeStudy =
-        LangUtil.getEmptytoFalse(
+        LangUtil.emptyToFalse(
             rsQueryParams.getProperties().getProperty(RsQueryParams.P_SHOW_WHOLE_STUDY));
     Set<String> studyHashSet = new LinkedHashSet<>();
 

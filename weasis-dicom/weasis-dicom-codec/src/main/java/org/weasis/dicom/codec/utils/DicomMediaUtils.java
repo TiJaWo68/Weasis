@@ -50,12 +50,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.weasis.core.api.media.data.ImageElement;
 import org.weasis.core.api.media.data.MediaSeriesGroup;
+import org.weasis.core.api.media.data.TagReadable;
 import org.weasis.core.api.media.data.TagUtil;
 import org.weasis.core.api.media.data.TagW;
 import org.weasis.core.api.media.data.TagW.TagType;
 import org.weasis.core.api.media.data.Taggable;
-import org.weasis.core.util.FileUtil;
 import org.weasis.core.util.MathUtil;
+import org.weasis.core.util.StreamUtil;
 import org.weasis.core.util.StringUtil;
 import org.weasis.dicom.codec.DicomMediaIO;
 import org.weasis.dicom.codec.TagD;
@@ -296,19 +297,77 @@ public class DicomMediaUtils {
     }
   }
 
-  public static void computeSlicePositionVector(Taggable taggable) {
+  /**
+   * Computes the sign-normalized unit normal of the image plane described by the
+   * ImageOrientationPatient tags in {@code taggable}. The dominant axis of the cross product (row ×
+   * column) is forced to be positive (LPS+) so the result is directly comparable across images and
+   * segmentations regardless of the cross-product sign convention.
+   *
+   * @param taggable source with ImageOrientationPatient tags
+   * @return sign-normalized unit normal, or {@code null} when IOP is absent
+   */
+  public static Vector3d computeImageNormal(TagReadable taggable) {
+    Vector3d vr = ImageOrientation.getRowImagePosition(taggable);
+    Vector3d vc = ImageOrientation.getColumnImagePosition(taggable);
+    if (vr == null || vc == null) {
+      return null;
+    }
+    Vector3d normal = VectorUtils.computeNormalOfSurface(vr, vc);
+    // Ensure the normal points in the positive direction of its dominant axis to sort
+    // slices in the anatomical direction. The cross product (row × column) can point in
+    // either direction for the same anatomical plane (e.g., +X or -X for sagittal), which
+    // would reverse the sort order. This normalization must match the DICOM LPS+ coordinate
+    // system (Left +X, Posterior +Y, Superior +Z) because the Slice Location tag is not
+    // always correct.
+    return VectorUtils.orientNormalToDominantPositiveAxis(normal);
+  }
+
+  /**
+   * Computes the signed scalar slice position, caches it as {@link TagW#SlicePosition}, and returns
+   * it.
+   *
+   * <p>The value equals {@code dot(normal, IPP)} and is used for sorting slices, finding the
+   * nearest image, and synchronizing scroll positions as Slice Location is not always available and
+   * sometimes not reliable.
+   *
+   * @return the signed scalar distance along the normal, or {@code null} if IPP/IOP are missing
+   */
+  public static Double computeSlicePosition(Taggable taggable) {
     if (taggable != null) {
       Vector3d pPos = PatientOrientation.getPatientPosition(taggable);
       if (pPos != null) {
-        Vector3d vr = ImageOrientation.getRowImagePosition(taggable);
-        Vector3d vc = ImageOrientation.getColumnImagePosition(taggable);
-        if (vr != null && vc != null) {
-          Vector3d normal = VectorUtils.computeNormalOfSurface(vr, vc);
-          normal.mul(pPos);
-          taggable.setTag(TagW.SlicePosition, new double[] {normal.x, normal.y, normal.z});
+        Vector3d normal = computeImageNormal(taggable);
+        if (normal != null) {
+          double dot = normal.dot(pPos);
+          taggable.setTag(TagW.SlicePosition, dot);
+          return dot;
         }
       }
+      // Fallback to SliceLocation when ImageOrientationPatient is absent (e.g., NM images).
+      // SliceLocation (0020,1041) provides a scalar position that is sufficient for
+      // matching segmentation frames to source images when IOP is unavailable.
+      Double sliceLoc = TagD.getTagValue(taggable, Tag.SliceLocation, Double.class);
+      if (sliceLoc != null) {
+        taggable.setTag(TagW.SlicePosition, sliceLoc);
+        return sliceLoc;
+      }
     }
+    return null;
+  }
+
+  /**
+   * Returns the signed scalar slice position cached by {@link #computeSlicePosition}, or {@code 0}
+   * if not available.
+   *
+   * @param taggable source with a {@link TagW#SlicePosition} tag
+   * @return the signed scalar distance along the normal, or 0 if the tag is missing
+   */
+  public static double getSlicePositionValue(TagReadable taggable) {
+    if (taggable == null) {
+      return 0;
+    }
+    Double loc = (Double) taggable.getTagValue(TagW.SlicePosition);
+    return loc == null ? 0 : loc;
   }
 
   /**
@@ -379,14 +438,7 @@ public class DicomMediaUtils {
       Attributes mLutItems = dcm.getNestedDataset(Tag.PixelValueTransformationSequence);
       if (mLutItems != null) {
         ModalityLutModule mlut = new ModalityLutModule(mLutItems);
-        if (frameIndex < 0) {
-          // If the frame index is not defined, we set the modality LUT for all frames
-          taggable.setTag(TagW.ModalityLUTData, mlut);
-        } else {
-          // Otherwise, we set the modality LUT for the specific frame
-          md.getImageDescriptor().setModalityLutForFrame(frameIndex, mlut);
-        }
-        taggable.setTag(TagW.ModalityLUTData, mlut);
+        md.getImageDescriptor().setModalityLutForFrame(Math.max(frameIndex, 0), mlut);
       }
 
       // C.7.6.16.2.10 Frame VOI LUT Macro:
@@ -394,13 +446,7 @@ public class DicomMediaUtils {
       Attributes vLutItems = dcm.getNestedDataset(Tag.FrameVOILUTSequence);
       if (vLutItems != null) {
         VoiLutModule vlut = new VoiLutModule(vLutItems);
-        if (frameIndex < 0) {
-          // If the frame index is not defined, we set the VOI LUT for all frames
-          taggable.setTag(TagW.VOILUTsData, vlut);
-        } else {
-          // Otherwise, we set the VOI LUT for the specific frame
-          md.getImageDescriptor().setVoiLutForFrame(frameIndex, vlut);
-        }
+        md.getImageDescriptor().setVoiLutForFrame(Math.max(frameIndex, 0), vlut);
       }
 
       // C.7.6.16.2.15 Patient Orientation in Frame Macro:
@@ -427,6 +473,18 @@ public class DicomMediaUtils {
     }
   }
 
+  /**
+   * Writes per-frame geometry from the Per-frame Functional Groups Sequence, falling back to NM
+   * tomographic detector geometry when the former is absent.
+   *
+   * @param index zero-based frame index
+   * @return {@code true} when frame geometry was written
+   */
+  public static boolean writeFrameGeometry(Taggable taggable, DicomMetaData md, int index) {
+    return writePerFrameFunctionalGroupsSequence(taggable, md, index)
+        || writeNmTomoGeometry(taggable, md, index);
+  }
+
   public static boolean writePerFrameFunctionalGroupsSequence(
       Taggable taggable, DicomMetaData md, int index) {
     Attributes header = md.getDicomObject();
@@ -441,6 +499,51 @@ public class DicomMediaUtils {
       }
     }
     return false;
+  }
+
+  /**
+   * Derives the per-frame Image Position/Orientation (Patient) of an NM tomographic (SPECT)
+   * multi-frame image. NM stores plane geometry in the Detector Information Sequence (0054,0022).
+   *
+   * @param frameIndex zero-based frame index
+   * @return {@code true} when NM tomographic geometry was found and written
+   */
+  public static boolean writeNmTomoGeometry(Taggable taggable, DicomMetaData md, int frameIndex) {
+    Attributes header = md == null ? null : md.getDicomObject();
+    if (header == null || taggable == null || !"NM".equals(header.getString(Tag.Modality))) {
+      return false;
+    }
+    Attributes detector = header.getNestedDataset(Tag.DetectorInformationSequence);
+    if (detector == null) {
+      return false;
+    }
+    double[] iop = detector.getDoubles(Tag.ImageOrientationPatient);
+    double[] ipp = detector.getDoubles(Tag.ImagePositionPatient);
+    double spacing = header.getDouble(Tag.SpacingBetweenSlices, 0.0);
+    if (iop == null || iop.length != 6 || ipp == null || ipp.length != 3 || spacing == 0.0) {
+      return false;
+    }
+
+    Vector3d normal = new Vector3d();
+    new Vector3d(iop[0], iop[1], iop[2]).cross(new Vector3d(iop[3], iop[4], iop[5]), normal);
+    if (normal.lengthSquared() == 0.0) {
+      return false;
+    }
+    normal.normalize();
+
+    int sliceOffset = frameIndex;
+    int[] sliceVector = header.getInts(Tag.SliceVector);
+    if (sliceVector != null && frameIndex >= 0 && frameIndex < sliceVector.length) {
+      sliceOffset = sliceVector[frameIndex] - 1;
+    }
+    double step = spacing * sliceOffset;
+    double[] framePos = {
+      ipp[0] + normal.x * step, ipp[1] + normal.y * step, ipp[2] + normal.z * step
+    };
+
+    taggable.setTag(TagD.get(Tag.ImageOrientationPatient), iop);
+    taggable.setTag(TagD.get(Tag.ImagePositionPatient), framePos);
+    return true;
   }
 
   public static void computeSUVFactor(Attributes dicomObject, Taggable taggable, int index) {
@@ -784,8 +887,8 @@ public class DicomMediaUtils {
       LOGGER.error("Reading KO Codes", e);
       codeByValue = null;
     } finally {
-      FileUtil.safeClose(xmler);
-      FileUtil.safeClose(stream);
+      StreamUtil.safeClose(xmler);
+      StreamUtil.safeClose(stream);
     }
     return codeByValue;
   }
@@ -1054,10 +1157,10 @@ public class DicomMediaUtils {
   }
 
   public static double getThickness(ImageElement firstDcm, ImageElement lastDcm) {
-    double[] p1 = (double[]) firstDcm.getTagValue(TagW.SlicePosition);
-    double[] p2 = (double[]) lastDcm.getTagValue(TagW.SlicePosition);
-    if (p1 != null && p2 != null) {
-      double diff = Math.abs((p2[0] + p2[1] + p2[2]) - (p1[0] + p1[1] + p1[2]));
+    double p1Val = getSlicePositionValue(firstDcm);
+    double p2Val = getSlicePositionValue(lastDcm);
+    if (p1Val != 0 || p2Val != 0) {
+      double diff = Math.abs(p2Val - p1Val);
 
       Double t1 = TagD.getTagValue(firstDcm, Tag.SliceThickness, Double.class);
       if (t1 != null) {

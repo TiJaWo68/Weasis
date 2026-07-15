@@ -13,7 +13,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jogamp.common.nio.Buffers;
 import com.jogamp.opengl.GL;
-import com.jogamp.opengl.GL4;
+import com.jogamp.opengl.GL2ES2;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Component;
@@ -26,7 +26,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import javax.swing.Icon;
 import org.joml.Vector4f;
@@ -40,7 +39,6 @@ import org.weasis.dicom.viewer3d.View3DContainer;
 import org.weasis.dicom.viewer3d.vr.lut.PresetGroup;
 import org.weasis.dicom.viewer3d.vr.lut.PresetPoint;
 import org.weasis.dicom.viewer3d.vr.lut.VolumePreset;
-import org.weasis.opencv.seg.RegionAttributes;
 
 public class Preset extends TextureData {
   private static final Logger LOGGER = LoggerFactory.getLogger(Preset.class);
@@ -319,25 +317,25 @@ public class Preset extends TextureData {
   }
 
   @Override
-  public void init(GL4 gl4) {
-    init(gl4, false);
+  public void init(GL2ES2 gl) {
+    init(gl, false);
   }
 
-  public void init(GL4 gl4, boolean inverse) {
-    super.init(gl4);
+  public void init(GL2ES2 gl, boolean inverse) {
+    super.init(gl);
     if (inverse && id2 <= 0) {
       IntBuffer intBuffer = IntBuffer.allocate(1);
-      gl4.glGenTextures(1, intBuffer);
+      gl.glGenTextures(1, intBuffer);
       id2 = intBuffer.get(0);
     }
     initColors(this, inverse);
-    gl4.glActiveTexture(GL.GL_TEXTURE1);
-    gl4.glBindTexture(GL.GL_TEXTURE_2D, inverse ? id2 : getId());
-    gl4.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR);
-    gl4.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR);
-    gl4.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP_TO_EDGE);
-    gl4.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP_TO_EDGE);
-    gl4.glTexImage2D(
+    gl.glActiveTexture(GL.GL_TEXTURE1);
+    gl.glBindTexture(GL.GL_TEXTURE_2D, inverse ? id2 : getId());
+    gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR);
+    gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR);
+    gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP_TO_EDGE);
+    gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP_TO_EDGE);
+    gl.glTexImage2D(
         GL.GL_TEXTURE_2D,
         0,
         internalFormat,
@@ -348,26 +346,26 @@ public class Preset extends TextureData {
         type,
         Buffers.newDirectByteBuffer(inverse ? invertColors : colors).rewind());
 
-    lightingMap.init(gl4);
+    lightingMap.init(gl);
   }
 
   @Override
-  public void render(GL4 gl4) {
-    render(gl4, false, false);
+  public void render(GL2ES2 gl) {
+    render(gl, false);
   }
 
-  void render(GL4 gl4, boolean inverse, boolean originalLut) {
-    if (gl4 != null) {
-      Preset p = originalLut ? originalPreset : this;
+  void render(GL2ES2 gl, boolean inverse) {
+    if (gl != null) {
+      Preset p = this;
       if (requiredBuilding) {
         this.requiredBuilding = false;
         if (p.getId() <= 0 || (inverse && (p.invertColors == null || p.id2 <= 0))) {
-          p.init(gl4, inverse);
+          p.init(gl, inverse);
         }
       }
 
-      gl4.glActiveTexture(GL.GL_TEXTURE1);
-      gl4.glTexImage2D(
+      gl.glActiveTexture(GL.GL_TEXTURE1);
+      gl.glTexImage2D(
           GL.GL_TEXTURE_2D,
           0,
           p.internalFormat,
@@ -378,15 +376,15 @@ public class Preset extends TextureData {
           p.type,
           Buffers.newDirectByteBuffer(inverse ? p.invertColors : p.colors).rewind());
 
-      p.lightingMap.update(gl4);
+      p.lightingMap.update(gl);
     }
   }
 
   @Override
-  public void destroy(GL4 gl4) {
-    super.destroy(gl4);
+  public void destroy(GL2ES2 gl) {
+    super.destroy(gl);
     if (id2 != 0) {
-      gl4.glDeleteTextures(1, new int[] {id2}, 0);
+      gl.glDeleteTextures(1, new int[] {id2}, 0);
       id2 = 0;
     }
   }
@@ -542,57 +540,5 @@ public class Preset extends TextureData {
       return container.getRegionMap();
     }
     return null;
-  }
-
-  private static List<SegRegion<?>> getOrderRegionAttributes(Map<String, List<SegRegion<?>>> map) {
-    List<SegRegion<?>> list = new ArrayList<>();
-    for (Entry<String, List<SegRegion<?>>> entry : map.entrySet()) {
-      list.addAll(entry.getValue());
-    }
-    list.sort(Comparator.comparingInt(RegionAttributes::getId));
-    return list;
-  }
-
-  public static Preset getSegmentationLut() {
-    Map<String, List<SegRegion<?>>> map = getRegionMap();
-
-    if (map != null && !map.isEmpty()) {
-      List<PresetGroup> groups = new ArrayList<>();
-      groups.add(new PresetGroup("StartEmpty", new PresetPoint[] {getTransparentPoint(0)}));
-
-      List<PresetPoint> presetPoints = new ArrayList<>();
-      int max = 1;
-
-      for (RegionAttributes a : getOrderRegionAttributes(map)) {
-        float opacity = a.getInteriorOpacity();
-        int density = a.getId();
-        max = Math.max(max, density);
-        if (a.isVisible()) {
-          Color c = a.getColor();
-          presetPoints.add(
-              new PresetPoint(
-                  density,
-                  opacity,
-                  c.getRed() / 255.0f,
-                  c.getGreen() / 255.0f,
-                  c.getBlue() / 255.0f,
-                  1.0f,
-                  0.2f,
-                  1.0f));
-        } else {
-          presetPoints.add(getTransparentPoint(density));
-        }
-      }
-      //   presetPoints.add(presetPoints.getLast());
-
-      groups.add(new PresetGroup("segments", presetPoints.toArray(new PresetPoint[0]))); // NON-NLS
-      // groups.add(new PresetGroup("EndEmpty", new PresetPoint[] {getTransparentPoint(max + 1)}));
-      return new Preset("Segmentation", "SEG", false, true, 1.0f, groups); // NON-NLS
-    }
-    return null;
-  }
-
-  private static PresetPoint getTransparentPoint(int intensity) {
-    return new PresetPoint(intensity, 0, 0f, 0f, 0f, 0.2f, 0.1f, 0.9f);
   }
 }

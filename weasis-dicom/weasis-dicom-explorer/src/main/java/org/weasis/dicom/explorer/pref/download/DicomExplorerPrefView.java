@@ -19,36 +19,36 @@ import javax.swing.SpinnerListModel;
 import org.weasis.core.api.explorer.DataExplorerView;
 import org.weasis.core.api.gui.util.AbstractItemDialogPage;
 import org.weasis.core.api.gui.util.GuiUtils;
+import org.weasis.core.api.media.data.SeriesThumbnail;
 import org.weasis.core.api.media.data.Thumbnail;
 import org.weasis.core.api.service.WProperties;
 import org.weasis.core.ui.pref.PreferenceDialog;
 import org.weasis.core.util.StringUtil;
-import org.weasis.dicom.explorer.DicomExplorer;
 import org.weasis.dicom.explorer.DicomSorter;
 import org.weasis.dicom.explorer.DicomSorter.SortingTime;
-import org.weasis.dicom.explorer.HangingProtocols.OpeningViewer;
+import org.weasis.dicom.explorer.LoadDicom;
 import org.weasis.dicom.explorer.Messages;
+import org.weasis.dicom.explorer.main.DicomExplorer;
 
 public class DicomExplorerPrefView extends AbstractItemDialogPage {
   public static final String DOWNLOAD_IMMEDIATELY = "weasis.download.immediately";
-  public static final String DOWNLOAD_OPEN_MODE = "weasis.download.open.view.mode";
   public static final String STUDY_DATE_SORTING = "weasis.sorting.study.date";
   private final JCheckBox downloadImmediatelyCheckbox =
       new JCheckBox(Messages.getString("SeriesDownloadPrefView.downloadImmediatelyCheckbox"));
   private final JSpinner spinner;
 
-  private final JComboBox<OpeningViewer> openingViewerJComboBox =
-      new JComboBox<>(OpeningViewer.values());
-
   private final JComboBox<SortingTime> studyDateSortingComboBox =
       new JComboBox<>(SortingTime.values());
+
+  private final JCheckBox showUnsupportedSopInfoCheckbox =
+      new JCheckBox(Messages.getString("dicom.unsupported.sop.notify"));
 
   public DicomExplorerPrefView() {
     super(Messages.getString("DicomExplorer.title"), 607);
     WProperties preferences = GuiUtils.getUICore().getSystemPreferences();
 
     JPanel panel = GuiUtils.getVerticalBoxLayoutPanel();
-    int thumbnailSize = preferences.getIntProperty(Thumbnail.KEY_SIZE, Thumbnail.DEFAULT_SIZE);
+    int thumbnailSize = SeriesThumbnail.getThumbnailSizeFromPreferences();
     JLabel thumbSize = new JLabel(Messages.getString("DicomExplorer.thmb_size"));
     SpinnerListModel model =
         new SpinnerListModel(
@@ -80,13 +80,18 @@ public class DicomExplorerPrefView extends AbstractItemDialogPage {
         GuiUtils.getFlowLayoutPanel(
             ITEM_SEPARATOR_SMALL, ITEM_SEPARATOR, downloadImmediatelyCheckbox));
 
-    JLabel labelOpenPatient =
-        new JLabel(Messages.getString("DicomExplorer.open_win") + StringUtil.COLON);
-    GuiUtils.setPreferredWidth(openingViewerJComboBox, 270, 150);
-    openingViewerJComboBox.setSelectedItem(getOpeningViewer());
-    panel2.add(GuiUtils.getFlowLayoutPanel(labelOpenPatient, openingViewerJComboBox));
-    panel2.setBorder(GuiUtils.getTitledBorder(Messages.getString("actions")));
+    panel2.setBorder(GuiUtils.getTitledBorder(Messages.getString("DicomExplorer.open_win")));
     add(panel2);
+    add(GuiUtils.boxVerticalStrut(BLOCK_SEPARATOR));
+
+    JPanel panel3 = GuiUtils.getVerticalBoxLayoutPanel();
+    showUnsupportedSopInfoCheckbox.setSelected(
+        preferences.getBooleanProperty(LoadDicom.SHOW_UNSUPPORTED_SOP_CLASS_INFO, true));
+    panel3.add(
+        GuiUtils.getFlowLayoutPanel(
+            ITEM_SEPARATOR_SMALL, ITEM_SEPARATOR, showUnsupportedSopInfoCheckbox));
+    panel3.setBorder(GuiUtils.getTitledBorder(Messages.getString("notifications")));
+    add(panel3);
 
     add(GuiUtils.boxYLastElement(LAST_FILLER_HEIGHT));
 
@@ -94,11 +99,6 @@ public class DicomExplorerPrefView extends AbstractItemDialogPage {
     getProperties().setProperty(PreferenceDialog.KEY_SHOW_RESTORE, Boolean.TRUE.toString());
     getProperties()
         .setProperty(PreferenceDialog.KEY_HELP, "dicom-explorer/#preferences"); // NON-NLS
-  }
-
-  private OpeningViewer getOpeningViewer() {
-    String key = GuiUtils.getUICore().getSystemPreferences().getProperty(DOWNLOAD_OPEN_MODE);
-    return OpeningViewer.getOpeningViewer(key, OpeningViewer.ALL_PATIENTS);
   }
 
   @Override
@@ -114,10 +114,11 @@ public class DicomExplorerPrefView extends AbstractItemDialogPage {
         STUDY_DATE_SORTING, String.valueOf(SortingTime.INVERSE_CHRONOLOGICAL.getId()));
     studyDateSortingComboBox.setSelectedItem(DicomSorter.getStudyDateSorting());
 
-    preferences.resetProperty(DOWNLOAD_OPEN_MODE, OpeningViewer.ALL_PATIENTS.name());
-    openingViewerJComboBox.setSelectedItem(getOpeningViewer());
-
     spinner.setValue(Thumbnail.DEFAULT_SIZE);
+
+    preferences.resetProperty(LoadDicom.SHOW_UNSUPPORTED_SOP_CLASS_INFO, Boolean.TRUE.toString());
+    showUnsupportedSopInfoCheckbox.setSelected(
+        preferences.getBooleanProperty(LoadDicom.SHOW_UNSUPPORTED_SOP_CLASS_INFO, true));
   }
 
   @Override
@@ -130,17 +131,15 @@ public class DicomExplorerPrefView extends AbstractItemDialogPage {
       preferences.putIntProperty(STUDY_DATE_SORTING, sortingTime.getId());
     }
 
-    OpeningViewer openingViewer = (OpeningViewer) openingViewerJComboBox.getSelectedItem();
-    if (openingViewer != null) {
-      preferences.put(DOWNLOAD_OPEN_MODE, openingViewer.name());
-    }
-
     DataExplorerView dicomView = GuiUtils.getUICore().getExplorerPlugin(DicomExplorer.NAME);
     if (dicomView instanceof DicomExplorer explorer) {
       int size = (int) spinner.getValue();
       preferences.putIntProperty(Thumbnail.KEY_SIZE, size);
       explorer.updateThumbnailSize(size);
     }
+
+    preferences.putBooleanProperty(
+        LoadDicom.SHOW_UNSUPPORTED_SOP_CLASS_INFO, showUnsupportedSopInfoCheckbox.isSelected());
 
     GuiUtils.getUICore().saveSystemPreferences();
   }

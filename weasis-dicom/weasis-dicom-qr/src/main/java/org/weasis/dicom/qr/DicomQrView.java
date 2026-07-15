@@ -10,21 +10,16 @@
 package org.weasis.dicom.qr;
 
 import com.formdev.flatlaf.FlatClientProperties;
-import com.github.lgooddatepicker.components.DatePicker;
-import com.github.lgooddatepicker.components.DatePickerSettings;
-import com.github.lgooddatepicker.optionalusertools.DateChangeListener;
 import java.awt.FlowLayout;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.nio.file.Path;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.time.temporal.TemporalAdjusters;
 import java.time.temporal.WeekFields;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -40,6 +35,7 @@ import javax.swing.ComboBoxModel;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JFormattedTextField;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -64,8 +60,6 @@ import org.dcm4che3.net.service.QueryRetrieveLevel;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.weasis.core.api.auth.AuthMethod;
-import org.weasis.core.api.auth.OAuth2ServiceFactory;
 import org.weasis.core.api.explorer.DataExplorerView;
 import org.weasis.core.api.gui.util.AbstractItemDialogPage;
 import org.weasis.core.api.gui.util.AppProperties;
@@ -78,24 +72,26 @@ import org.weasis.core.api.gui.util.GuiUtils;
 import org.weasis.core.api.gui.util.WinUtil;
 import org.weasis.core.api.media.data.MediaSeriesGroup;
 import org.weasis.core.api.media.data.TagW;
+import org.weasis.core.api.net.auth.AuthMethod;
+import org.weasis.core.api.net.auth.OAuth2ServiceFactory;
 import org.weasis.core.api.service.BundlePreferences;
 import org.weasis.core.api.service.WProperties;
-import org.weasis.core.api.util.ResourceUtil;
-import org.weasis.core.api.util.ResourceUtil.OtherIcon;
 import org.weasis.core.api.util.ThreadUtil;
 import org.weasis.core.ui.pref.PreferenceDialog;
+import org.weasis.core.ui.tp.raven.datetime.DatePicker;
+import org.weasis.core.ui.tp.raven.datetime.event.DateSelectionListener;
 import org.weasis.core.ui.tp.raven.spinner.SpinnerProgress;
-import org.weasis.core.ui.util.CalendarUtil;
 import org.weasis.core.util.FileUtil;
+import org.weasis.core.util.StreamUtil;
 import org.weasis.core.util.StringUtil;
 import org.weasis.dicom.codec.TagD;
 import org.weasis.dicom.codec.display.CharsetEncoding;
 import org.weasis.dicom.codec.display.Modality;
-import org.weasis.dicom.explorer.DicomExplorer;
 import org.weasis.dicom.explorer.DicomModel;
-import org.weasis.dicom.explorer.ImportDicom;
 import org.weasis.dicom.explorer.LoadLocalDicom;
 import org.weasis.dicom.explorer.PluginOpeningStrategy;
+import org.weasis.dicom.explorer.imp.ImportDicom;
+import org.weasis.dicom.explorer.main.DicomExplorer;
 import org.weasis.dicom.explorer.pref.node.AbstractDicomNode;
 import org.weasis.dicom.explorer.pref.node.AbstractDicomNode.RetrieveType;
 import org.weasis.dicom.explorer.pref.node.AbstractDicomNode.UsageType;
@@ -276,12 +272,12 @@ public class DicomQrView extends AbstractItemDialogPage implements ImportDicom {
           super.contentsChanged(e);
           currentPeriod = getSelectedItem();
           if (currentPeriod != null) {
-            startDatePicker.removeDateChangeListener(dateChangeListener);
-            endDatePicker.removeDateChangeListener(dateChangeListener);
-            startDatePicker.setDate(currentPeriod.getStart());
-            endDatePicker.setDate(currentPeriod.getEnd());
-            startDatePicker.addDateChangeListener(dateChangeListener);
-            endDatePicker.addDateChangeListener(dateChangeListener);
+            startDatePicker.removeDateSelectionListener(dateChangeListener);
+            endDatePicker.removeDateSelectionListener(dateChangeListener);
+            startDatePicker.setSelectedDate(currentPeriod.getStart());
+            endDatePicker.setSelectedDate(currentPeriod.getEnd());
+            startDatePicker.addDateSelectionListener(dateChangeListener);
+            endDatePicker.addDateSelectionListener(dateChangeListener);
           }
         }
       };
@@ -299,7 +295,7 @@ public class DicomQrView extends AbstractItemDialogPage implements ImportDicom {
           return menu;
         }
       };
-  private final DateChangeListener dateChangeListener = a -> groupDate.setSelected(null);
+  private final DateSelectionListener dateChangeListener = a -> groupDate.setSelected(null);
   private final ActionListener destNodeListener = evt -> applySelectedArchive();
   private final ChangeListener queryListener = e -> dicomQuery();
   private final DatePicker startDatePicker = buildDatePicker();
@@ -340,10 +336,11 @@ public class DicomQrView extends AbstractItemDialogPage implements ImportDicom {
         DicomProgress progress = new DicomProgress();
         progress.addProgressListener(
             p -> {
-              File current = p.getProcessedFile();
+              Path current = p.getProcessedFile();
               if (current != null && p.getAttributes() == null) {
                 LoadLocalDicom task =
-                    new LoadLocalDicom(new File[] {current}, false, model, openingStrategy);
+                    new LoadLocalDicom(
+                        new File[] {current.toFile()}, false, model, openingStrategy);
                 DicomModel.LOADING_EXECUTOR.execute(task);
               }
             });
@@ -362,9 +359,9 @@ public class DicomQrView extends AbstractItemDialogPage implements ImportDicom {
     return GuiUtils.getUICore().getPluginPersistence(DicomQrView.class.getPackageName());
   }
 
-  public static File getSessionTempFolder() {
+  public static Path getSessionTempFolder() {
     return FileUtil.createTempDir(
-        AppProperties.buildAccessibleTempDirectory("tmp", "qr")); // NON-NLS
+        AppProperties.buildAccessibleTempDirectory("tmp", "qr")); // NON-NLS;
   }
 
   public void initGUI() {
@@ -499,10 +496,10 @@ public class DicomQrView extends AbstractItemDialogPage implements ImportDicom {
             dateButton,
             GuiUtils.boxXLastElement(ITEM_SEPARATOR_LARGE),
             labelFrom,
-            startDatePicker.getComponentDateTextField(),
+            startDatePicker.getEditor(),
             GuiUtils.boxXLastElement(ITEM_SEPARATOR),
             labelTo,
-            endDatePicker.getComponentDateTextField());
+            endDatePicker.getEditor());
 
     comboTags.setMaximumRowCount(15);
     GuiUtils.setPreferredWidth(comboTags, 230, 150);
@@ -624,8 +621,8 @@ public class DicomQrView extends AbstractItemDialogPage implements ImportDicom {
             end = DicomObjectUtil.getDicomDate(range[1]);
           }
 
-          startDatePicker.setDate(start);
-          endDatePicker.setDate(end);
+          startDatePicker.setSelectedDate(start);
+          endDatePicker.setSelectedDate(end);
         } else {
           comboTags.setSelectedItem(TagD.get(dicomParam.getTag()));
           tfSearch.setText(dicomParam.getValues()[0]);
@@ -639,35 +636,23 @@ public class DicomQrView extends AbstractItemDialogPage implements ImportDicom {
   }
 
   private DatePicker buildDatePicker() {
+
     DatePicker picker = new DatePicker();
-    DatePickerSettings settings = picker.getSettings();
-    CalendarUtil.adaptCalendarColors(settings);
+    picker.setStartWeekOnMonday(true);
+    JFormattedTextField editor = new JFormattedTextField();
+    picker.setEditor(editor);
 
-    JTextField textField = picker.getComponentDateTextField();
-    settings.setFormatForDatesCommonEra(DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT));
-    settings.setFormatForDatesBeforeCommonEra(DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT));
+    JTextField textField = picker.getEditor();
     GuiUtils.setPreferredWidth(textField, 145);
-    picker.addDateChangeListener(dateChangeListener);
-
-    textField.putClientProperty(FlatClientProperties.TEXT_FIELD_SHOW_CLEAR_BUTTON, true);
-    JButton calendarButton = picker.getComponentToggleCalendarButton();
-    calendarButton.setMargin(null);
-    calendarButton.setText(null);
-    calendarButton.setIcon(ResourceUtil.getIcon(OtherIcon.CALENDAR));
-    calendarButton.setFocusPainted(true);
-    calendarButton.setFocusable(true);
-    calendarButton.revalidate();
-    Arrays.stream(calendarButton.getMouseListeners()).forEach(calendarButton::removeMouseListener);
-    calendarButton.addActionListener(e -> picker.openPopup());
-    textField.putClientProperty(FlatClientProperties.TEXT_FIELD_TRAILING_COMPONENT, calendarButton);
+    picker.addDateSelectionListener(dateChangeListener);
     return picker;
   }
 
   private void clearItems() {
     tfSearch.setText(null);
     groupMod.selectAll();
-    startDatePicker.setDate(null);
-    endDatePicker.setDate(null);
+    startDatePicker.setSelectedDate(null);
+    endDatePicker.setSelectedDate(null);
     currentPeriod = null;
     pageSpinner.removeChangeListener(queryListener);
     pageSpinner.setValue(1);
@@ -792,7 +777,7 @@ public class DicomQrView extends AbstractItemDialogPage implements ImportDicom {
       process.start();
     } else if (selectedItem instanceof final DicomWebNode node) {
       AuthMethod auth = AuthenticationPersistence.getAuthMethod(node.getAuthMethodUid());
-      if (!OAuth2ServiceFactory.noAuth.equals(auth)) {
+      if (!OAuth2ServiceFactory.NO_AUTH.equals(auth)) {
         String oldCode = auth.getCode();
         authMethod = auth;
         if (authMethod.getToken() == null) {
@@ -962,8 +947,8 @@ public class DicomQrView extends AbstractItemDialogPage implements ImportDicom {
     }
     p.getParameters().add(new DicomParam(Tag.ModalitiesInStudy, list));
 
-    LocalDate sDate = startDatePicker.getDate();
-    LocalDate eDate = endDatePicker.getDate();
+    LocalDate sDate = startDatePicker.getSelectedDate();
+    LocalDate eDate = endDatePicker.getSelectedDate();
     String range = "";
     if (sDate != null || eDate != null) {
       range = TagD.formatDicomDate(sDate) + "-" + TagD.formatDicomDate(eDate);
@@ -1007,7 +992,8 @@ public class DicomQrView extends AbstractItemDialogPage implements ImportDicom {
       writer =
           factory.createXMLStreamWriter(
               new FileOutputStream(
-                  new File(BundlePreferences.getDataFolder(context), SearchParameters.FILENAME)),
+                  BundlePreferences.getFileInDataFolder(context, SearchParameters.FILENAME)
+                      .toFile()),
               "UTF-8"); // NON-NLS
 
       writer.writeStartDocument("UTF-8", "1.0"); // NON-NLS
@@ -1024,7 +1010,7 @@ public class DicomQrView extends AbstractItemDialogPage implements ImportDicom {
     } catch (Exception e) {
       LOGGER.error("Error on writing DICOM node file", e);
     } finally {
-      FileUtil.safeClose(writer);
+      StreamUtil.safeClose(writer);
     }
   }
 

@@ -225,7 +225,7 @@ public class PerpendicularLineGraphic extends AbstractDragGraphic {
         if (LINE_LENGTH.getComputed()) {
           measVal.add(
               new MeasureItem(
-                  LINE_LENGTH, ptC.distance(ptD) * adapter.getCalibRatio(), adapter.getUnit()));
+                  LINE_LENGTH, ptC.distance(ptD) * adapter.calibrationRatio(), adapter.unit()));
         }
         if (ORIENTATION.getComputed()) {
           measVal.add(

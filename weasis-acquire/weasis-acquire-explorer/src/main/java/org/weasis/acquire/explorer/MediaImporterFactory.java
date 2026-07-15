@@ -9,7 +9,6 @@
  */
 package org.weasis.acquire.explorer;
 
-import java.io.File;
 import java.util.Dictionary;
 import java.util.Hashtable;
 import java.util.Properties;
@@ -23,7 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.weasis.core.api.explorer.DataExplorerViewFactory;
 import org.weasis.core.api.service.BundlePreferences;
-import org.weasis.core.util.FileUtil;
+import org.weasis.core.util.PropertiesUtil;
 
 @org.osgi.service.component.annotations.Component(service = DataExplorerViewFactory.class)
 public class MediaImporterFactory implements DataExplorerViewFactory {
@@ -50,8 +49,8 @@ public class MediaImporterFactory implements DataExplorerViewFactory {
   @Activate
   protected void activate(ComponentContext context) {
     registerCommands(context);
-    FileUtil.readProperties(
-        new File(BundlePreferences.getDataFolder(context.getBundleContext()), "publish.properties"),
+    PropertiesUtil.loadProperties(
+        BundlePreferences.getFileInDataFolder(context.getBundleContext(), "publish.properties"),
         EXPORT_PERSISTENCE);
   }
 
@@ -61,9 +60,8 @@ public class MediaImporterFactory implements DataExplorerViewFactory {
       explorer.saveLastPath();
       AcquireManager.getInstance().unRegisterDataExplorerView();
       // TODO handle user message if all data is not published !!!
-      FileUtil.storeProperties(
-          new File(
-              BundlePreferences.getDataFolder(context.getBundleContext()), "publish.properties"),
+      PropertiesUtil.storeProperties(
+          BundlePreferences.getFileInDataFolder(context.getBundleContext(), "publish.properties"),
           EXPORT_PERSISTENCE,
           null);
     }

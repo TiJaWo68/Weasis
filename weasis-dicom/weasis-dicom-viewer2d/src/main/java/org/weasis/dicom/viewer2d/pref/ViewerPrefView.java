@@ -203,7 +203,7 @@ public class ViewerPrefView extends AbstractItemDialogPage {
       view.setMouseActions(eventManager.getMouseActions());
     }
 
-    Interpolation inter = Interpolation.getInterpolation(interpolationPosition);
+    Interpolation inter = Interpolation.fromPosition(interpolationPosition);
     List<ViewerPlugin<?>> viewerPlugins = GuiUtils.getUICore().getViewerPlugins();
     synchronized (viewerPlugins) {
       for (final ViewerPlugin<?> p : viewerPlugins) {

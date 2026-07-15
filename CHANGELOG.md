@@ -1,5 +1,94 @@
 # Changelog
 
+## [v4.7.0](https://github.com/nroduit/Weasis/tree/v4.7.0) (2026-05-28)
+
+[Full Changelog](https://github.com/nroduit/Weasis/compare/v4.6.6...v4.7.0)
+
+**Implemented enhancements:**
+
+- Per-action auto-synchronization with per-view control and FrameOfReferenceUID-aware grouping [\#823](https://github.com/nroduit/Weasis/issues/823)
+- Manage OpenCV native \(off-heap\) memory and add a resource monitor for hardware fitness [\#822](https://github.com/nroduit/Weasis/issues/822)
+- Acquire/Dicomizer: validate imported videos and warn the user when files are rejected [\#821](https://github.com/nroduit/Weasis/issues/821)
+- Add segmentation overlay rendering in the 3D Volume Renderer [\#818](https://github.com/nroduit/Weasis/issues/818)
+- Add segmentation overlay in MPR views [\#817](https://github.com/nroduit/Weasis/issues/817)
+- DICOM SEG: Fix frame position lookup priority and handle Spatial Locations Preserved attribute [\#816](https://github.com/nroduit/Weasis/issues/816)
+- Support FRACTIONAL and LABELMAP DICOM segmentation types [\#815](https://github.com/nroduit/Weasis/issues/815)
+- Update to weasis-dicom-tools 5.34.2 \(Refactoring and API changes\) [\#811](https://github.com/nroduit/Weasis/issues/811)
+- Misleading Error Message: "Cannot Be Read" for Valid DICOM Files [\#810](https://github.com/nroduit/Weasis/issues/810)
+- Redesign tab opening preferences for studies to improve usability and handle different import contexts [\#806](https://github.com/nroduit/Weasis/issues/806)
+- Allow customization of most keyboard shortcuts in preferences [\#804](https://github.com/nroduit/Weasis/issues/804)
+- MPR crosshair cut mode for 3D volume rendering [\#799](https://github.com/nroduit/Weasis/issues/799)
+- Add DICOM export for MPR views with current orientation [\#796](https://github.com/nroduit/Weasis/issues/796)
+- Integrated MIP projection mode in the standard 2D viewer with full synchronization and slab geometry overlay [\#795](https://github.com/nroduit/Weasis/issues/795)
+- Unify DICOM import UX: handle ZIP drag-and-drop and consolidate into the "Local Device" dialog [\#793](https://github.com/nroduit/Weasis/issues/793)
+- Replace GridBagLayout with MigLayout and improve layout management [\#791](https://github.com/nroduit/Weasis/issues/791)
+- Add a new date picker [\#789](https://github.com/nroduit/Weasis/issues/789)
+- Upgrade to Java 25 LTS and fix related issues [\#786](https://github.com/nroduit/Weasis/issues/786)
+- Add OpenGL 3.3 volume rendering backend \(FBO + Fragment Shader\) to enable macOS support [\#784](https://github.com/nroduit/Weasis/issues/784)
+- Speed up MPR loading when no patient-orientation rectification is required [\#781](https://github.com/nroduit/Weasis/issues/781)
+- Enable color image rendering in MPR views [\#780](https://github.com/nroduit/Weasis/issues/780)
+- Use system file chooser instead of the Java common one [\#761](https://github.com/nroduit/Weasis/issues/761)
+- Manual series scroll sync [\#700](https://github.com/nroduit/Weasis/issues/700)
+- Display regions of multiple SEG objects in same list [\#681](https://github.com/nroduit/Weasis/issues/681)
+
+**Fixed bugs:**
+
+- BINARY SEG masks with Columns not a multiple of 8 decoded incorrectly by OpenCV native 1-bit decoder [\#820](https://github.com/nroduit/Weasis/issues/820)
+- IllegalThreadStateException: duplicate Thread.start\(\) call in Launcher.java [\#813](https://github.com/nroduit/Weasis/issues/813)
+- Several Horizontal Banding/Striations in MPR Views \(COR/SAG\) [\#771](https://github.com/nroduit/Weasis/issues/771)
+- The current view will also move when MPR is orthogonal. [\#769](https://github.com/nroduit/Weasis/issues/769)
+- MPR generates deformed axial image in non-axially scanned volumes. [\#752](https://github.com/nroduit/Weasis/issues/752)
+- MPR scrolling follows the image axes instead of the oblique MPR axis [\#702](https://github.com/nroduit/Weasis/issues/702)
+- Print 2x3 images using 2d Viewer Layout result on low quality and pixelate image. [\#509](https://github.com/nroduit/Weasis/issues/509)
+
+**Closed issues:**
+
+- HTTP downloads now exclusively use HttpClient \(removed legacy HttpURLConnection paths\) [\#812](https://github.com/nroduit/Weasis/issues/812)
+- Search in Cyrillic [\#802](https://github.com/nroduit/Weasis/issues/802)
+- fix: oauth service cache key ignores callback port, reusing wrong service instance [\#800](https://github.com/nroduit/Weasis/issues/800)
+- Deprecate 32-bit ARM build support due to lack of official JDK compatibility [\#790](https://github.com/nroduit/Weasis/issues/790)
+- Update to weasis-dicom-tools 5.34.2 [\#788](https://github.com/nroduit/Weasis/issues/788)
+- Use only java.net.http.HttpClient for all HTTP requests [\#787](https://github.com/nroduit/Weasis/issues/787)
+
+## [v4.6.6](https://github.com/nroduit/Weasis/tree/v4.6.6) (2025-12-29)
+
+[Full Changelog](https://github.com/nroduit/Weasis/compare/v4.6.5...v4.6.6)
+
+**Implemented enhancements:**
+
+- Improve logic for hiding corner annotations according to view size [\#766](https://github.com/nroduit/Weasis/issues/766)
+- Display warning on MPR on non-axial series requiring geometric transformations [\#765](https://github.com/nroduit/Weasis/issues/765)
+- 4D Series: Dialog to automatically divide a multi-phase series into individual phase sub-series \(MPR, MIP and VR\) [\#763](https://github.com/nroduit/Weasis/issues/763)
+- Dicomizer: Use the file’s last modified date instead of the invalid date from the acquisition device [\#762](https://github.com/nroduit/Weasis/issues/762)
+- Update to Flatlaf 3.7 [\#760](https://github.com/nroduit/Weasis/issues/760)
+- Preserve the last-used format as the default setting for the ECG viewer [\#754](https://github.com/nroduit/Weasis/issues/754)
+
+**Fixed bugs:**
+
+- View selection incorrectly resets to first position after MIP view replacement [\#764](https://github.com/nroduit/Weasis/issues/764)
+- Images with Deflated Explicit VR Little Endian not shown correctly [\#755](https://github.com/nroduit/Weasis/issues/755)
+- Overlay buttons on view canvas should always be visible [\#744](https://github.com/nroduit/Weasis/issues/744)
+- Orientation in Display do not work for some modalities [\#743](https://github.com/nroduit/Weasis/issues/743)
+- Strange behavior of the selected view while building MIP. [\#741](https://github.com/nroduit/Weasis/issues/741)
+- Pan with Orthographic Projection Mode in 3D Viewer [\#732](https://github.com/nroduit/Weasis/issues/732)
+- PNG codec error and image zooming/moving trouble [\#553](https://github.com/nroduit/Weasis/issues/553)
+
+**Security fixes:**
+
+- Weasis installer disables browser URL security popups via managed policies [\#753](https://github.com/nroduit/Weasis/issues/753)
+
+## [v4.6.5](https://github.com/nroduit/Weasis/tree/v4.6.5) (2025-10-05)
+
+[Full Changelog](https://github.com/nroduit/Weasis/compare/v4.6.4...v4.6.5)
+
+**Implemented enhancements:**
+
+- New behavior of 4D DICOM series splitting [\#739](https://github.com/nroduit/Weasis/issues/739)
+
+**Fixed bugs:**
+
+- Weasis 4.6.3 vs. 4.6.4 - Update = Cannot read this media! [\#740](https://github.com/nroduit/Weasis/issues/740)
+
 ## [v4.6.4](https://github.com/nroduit/Weasis/tree/v4.6.4) (2025-10-03)
 
 [Full Changelog](https://github.com/nroduit/Weasis/compare/v4.6.3...v4.6.4)
@@ -14,7 +103,6 @@
 - MPR: Image orientation correction for non-standard patient positioning using 3D matrix transformations [\#716](https://github.com/nroduit/Weasis/issues/716)
 - Gantry tilt correction using backward mapping and trilinear interpolation [\#715](https://github.com/nroduit/Weasis/issues/715)
 - JPEG-XL Support [\#658](https://github.com/nroduit/Weasis/issues/658)
-- New behavior of 4D DICOM series splitting [\#739](https://github.com/nroduit/Weasis/issues/739)
 
 **Fixed bugs:**
 

@@ -216,8 +216,8 @@ public class ParallelLineGraphic extends AbstractDragGraphic {
         if (DISTANCE.getComputed()) {
           Double val =
               ptC.distance(GeomUtil.getPerpendicularPointToLine(ptA, ptB, ptC))
-                  * adapter.getCalibRatio();
-          measVal.add(new MeasureItem(DISTANCE, val, adapter.getUnit()));
+                  * adapter.calibrationRatio();
+          measVal.add(new MeasureItem(DISTANCE, val, adapter.unit()));
         }
         if (ORIENTATION.getComputed()) {
           measVal.add(

@@ -11,10 +11,12 @@ package org.weasis.dicom.explorer;
 
 import java.io.File;
 import java.util.*;
+import javax.swing.JOptionPane;
 import org.weasis.core.api.explorer.ObservableEvent;
 import org.weasis.core.api.explorer.model.DataExplorerModel;
 import org.weasis.core.api.gui.util.AppProperties;
 import org.weasis.core.api.gui.util.Filter;
+import org.weasis.core.api.gui.util.GuiUtils;
 import org.weasis.core.api.media.MimeInspector;
 import org.weasis.core.api.media.data.*;
 import org.weasis.core.ui.model.GraphicModel;
@@ -22,7 +24,10 @@ import org.weasis.core.ui.serialize.XmlSerializer;
 import org.weasis.core.util.FileUtil;
 import org.weasis.dicom.codec.*;
 import org.weasis.dicom.codec.DicomMediaIO.Reading;
+import org.weasis.dicom.codec.utils.DicomMediaUtils;
 import org.weasis.dicom.explorer.HangingProtocols.OpeningViewer;
+import org.weasis.dicom.explorer.imp.DicomZipCodec;
+import org.weasis.dicom.explorer.imp.DicomZipMediaIO;
 
 public class LoadLocalDicom extends LoadDicom {
 
@@ -65,7 +70,7 @@ public class LoadLocalDicom extends LoadDicom {
       if (isCancelled()) {
         return;
       }
-      if (value == null) {
+      if (value == null || !value.canRead()) {
         continue;
       }
 
@@ -73,14 +78,13 @@ public class LoadLocalDicom extends LoadDicom {
         if (firstLevel || recursive) {
           folders.add(value);
         }
-      } else if (value.canRead()
-              && FileUtil.isFileExtensionMatching(value, DicomCodec.FILE_EXTENSIONS)
+      } else if (FileUtil.isFileExtensionMatching(value.toPath(), DicomCodec.FILE_EXTENSIONS)
           || MimeInspector.isMatchingMimeTypeFromMagicNumber(value, DicomMediaIO.DICOM_MIMETYPE)) {
         DicomMediaIO loader = new DicomMediaIO(value);
         Reading reading = loader.getReadingStatus();
         if (reading == Reading.READABLE) {
-          if (value.getPath().startsWith(AppProperties.APP_TEMP_DIR.getPath())) {
-            loader.getFileCache().setOriginalTempFile(value);
+          if (value.getPath().startsWith(AppProperties.APP_TEMP_DIR.toString())) {
+            loader.getFileCache().setOriginalTempFile(value.toPath());
           }
           uniqueSeriesSet.add(buildDicomStructure(loader));
 
@@ -91,7 +95,12 @@ public class LoadLocalDicom extends LoadDicom {
           }
         } else if (reading == Reading.ERROR) {
           errors.incrementAndGet();
+        } else if (reading == Reading.UNSUPPORTED) {
+          unsupported.incrementAndGet();
         }
+      } else if (FileUtil.isFileExtensionMatching(value.toPath(), DicomZipCodec.FILE_EXTENSIONS)
+          || MimeInspector.isMatchingMimeTypeFromMagicNumber(value, DicomZipMediaIO.MIME_TYPE)) {
+        new DicomZipMediaIO(value.toURI(), null).delegate(dicomModel);
       }
     }
 
@@ -180,6 +189,40 @@ public class LoadLocalDicom extends LoadDicom {
     return false;
   }
 
+  /**
+   * Checks if a series is a multi-phase series that can be separated.
+   *
+   * @param series the series to check
+   * @return true if the series has multiple phases (step > 1) and is a DicomSeries
+   */
+  public static boolean isMultiPhaseSeries(MediaSeries<?> series) {
+    return series.getTagValue(TagW.stepNDimensions) instanceof Integer step && step > 1;
+  }
+
+  public static MediaSeries<DicomImageElement> confirmSplittingMultiPhaseSeries(
+      MediaSeries<DicomImageElement> series) {
+    if (isMultiPhaseSeries(series) && series instanceof DicomSeries dicomSeries) {
+      int result =
+          JOptionPane.showConfirmDialog(
+              GuiUtils.getUICore().getApplicationWindow(),
+              Messages.getString("msg.multi.phase"),
+              Messages.getString("multi.phase.title"),
+              JOptionPane.OK_CANCEL_OPTION,
+              JOptionPane.QUESTION_MESSAGE);
+
+      if (result == JOptionPane.OK_OPTION) {
+        DicomModel dicomModel =
+            (DicomModel) dicomSeries.getTagValue(org.weasis.core.api.media.data.TagW.ExplorerModel);
+        if (dicomModel != null) {
+          LoadLocalDicom.seriesPostProcessing(dicomSeries, dicomModel, true);
+          return dicomSeries;
+        }
+      }
+      return null;
+    }
+    return series;
+  }
+
   private static Filter<DicomImageElement> getDicomImageElementFilter(int index, int size) {
     return new Filter<>() {
       private final int samplingRate = size;
@@ -197,13 +240,11 @@ public class LoadLocalDicom extends LoadDicom {
   static int calculateSamplingRateFor4d(List<DicomImageElement> imageList) {
     try {
       if (imageList.size() >= 2) {
-        double[] firstPos = (double[]) imageList.getFirst().getTagValue(TagW.SlicePosition);
-        double firstPosSum = firstPos[0] + firstPos[1] + firstPos[2];
+        double firstPosSum = DicomMediaUtils.getSlicePositionValue(imageList.getFirst());
 
         int samePositionCount = 1;
         for (int i = 1; i < imageList.size(); i++) {
-          double[] pos = (double[]) imageList.get(i).getTagValue(TagW.SlicePosition);
-          double posSum = pos[0] + pos[1] + pos[2];
+          double posSum = DicomMediaUtils.getSlicePositionValue(imageList.get(i));
           if (Math.abs(posSum - firstPosSum) < 0.05) {
             samePositionCount++;
           } else {

@@ -66,4 +66,17 @@ struct LightParameters {
 };
 uniform LightParameters lights[4];
 
-const vec3 sliceOffset = vec3(0.5, 0.5, 0.0);
+const vec3 sliceOffset = vec3(0.5, 0.5, 0.5);
+
+// MPR crosshair
+uniform vec3  crosshairPos;
+uniform mat3  crosshairRot;
+uniform bool  crosshairVisible;
+uniform int   crosshairCutMode;
+
+// Segmentation overlay
+uniform bool segOverlayEnabled = false;
+// When true, only the segmentation is rendered; the anatomy volume raymarch is skipped.
+uniform bool segOnly = false;
+uniform int  segSegmentCount = 0;
+

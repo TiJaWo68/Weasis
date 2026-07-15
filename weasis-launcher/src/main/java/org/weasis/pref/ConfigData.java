@@ -11,12 +11,14 @@ package org.weasis.pref;
 
 import static java.util.stream.Collectors.*;
 
+import com.formdev.flatlaf.util.SystemInfo;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -290,16 +292,20 @@ public class ConfigData {
   }
 
   private void applyLocalCodebase() {
+    applyLocalCodebase(false);
+  }
+
+  private void applyLocalCodebase(boolean force) {
     File localCodebase = findLocalCodebase();
     String baseURI = localCodebase.toURI().toString();
     if (baseURI.endsWith("/")) {
       baseURI = baseURI.substring(0, baseURI.length() - 1);
     }
     try {
-      addProperty(P_WEASIS_CODEBASE_LOCAL, localCodebase.getAbsolutePath());
-      addProperty(P_WEASIS_CODEBASE_URL, baseURI);
+      addProperty(P_WEASIS_CODEBASE_LOCAL, localCodebase.getAbsolutePath(), force);
+      addProperty(P_WEASIS_CODEBASE_URL, baseURI, force);
       baseURI += "/" + CONFIG_DIRECTORY + "/";
-      addProperty(CONFIG_PROPERTIES_PROP, baseURI + CONFIG_PROPERTIES_FILE_VALUE);
+      addProperty(CONFIG_PROPERTIES_PROP, baseURI + CONFIG_PROPERTIES_FILE_VALUE, force);
     } catch (Exception e) {
       LOGGER.error("Apply Codebase", e);
     }
@@ -410,9 +416,9 @@ public class ConfigData {
       }
     }
     Properties p = new Properties();
-    FileUtil.readProperties(file, p);
+    FileUtil.loadProperties(file.toPath(), p);
 
-    boolean mproxy = Utils.getEmptyToFalse(p.getProperty("proxy.manual"));
+    boolean mproxy = Utils.emptyToFalse(p.getProperty("proxy.manual"));
 
     if (mproxy) {
       String exceptions = p.getProperty("proxy.exceptions");
@@ -474,7 +480,12 @@ public class ConfigData {
         // DICOM files
         if (val.startsWith("file:")) { // NON-NLS
           try {
-            val = new File(new URI(arg)).getPath();
+            URI u = new URI(arg);
+            if (u.getAuthority() != null && SystemInfo.isWindows) {
+              val = "\\\\" + u.getAuthority() + u.getPath();
+            } else {
+              val = Paths.get(u).toFile().getPath();
+            }
           } catch (URISyntaxException e) {
             LOGGER.error("Convert URI to file", e);
           }
@@ -708,7 +719,22 @@ public class ConfigData {
     if (propURI != null) {
       configOutput.append("\n  Application configuration file = "); // NON-NLS
       configOutput.append(propURI);
-      preferences.readJson(propURI);
+      if (!preferences.readJson(propURI)) {
+        // The configuration server is unreachable (or returned an invalid file): fall back to the
+        // self-contained local installation so Weasis can still start without the remote server.
+        URI localURI = getLocalPropertiesURI(CONFIG_PROPERTIES_FILE_VALUE);
+        if (localURI != null && !localURI.equals(propURI)) {
+          LOGGER.warn(
+              "Cannot load configuration from {}, falling back to the local installation {}",
+              propURI,
+              localURI);
+          // Force the codebase to local so bundle locations resolve to the bundled jars.
+          applyLocalCodebase(true);
+          configOutput.append("\n  Fallback to local configuration file = "); // NON-NLS
+          configOutput.append(localURI);
+          preferences.readJson(localURI);
+        }
+      }
 
     } else {
       LOGGER.error("No base.json path found, Weasis cannot start!");
@@ -831,17 +857,15 @@ public class ConfigData {
   }
 
   public static void setOsgiNativeLibSpecification() {
-    // Follows the OSGI specification to use Bundle-NativeCode in the bundle fragment :
+    // Follows the OSGI specification to use Bundle-NativeCode in the bundle fragment:
     // See https://docs.osgi.org/reference/osnames.html
     String osName = System.getProperty(P_OS_NAME);
     String osArch = System.getProperty("os.arch");
     if (Utils.hasText(osName) && Utils.hasText(osArch)) {
       if (osName.toLowerCase().startsWith("win")) {
         // All Windows versions with a specific processor architecture (x86 or x86-64) are grouped
-        // under
-        // windows. If you need to make different native libraries for the Windows versions, define
-        // it in the
-        // Bundle-NativeCode tag of the bundle fragment.
+        // under windows. If you need to make different native libraries for the Windows versions,
+        // define it in the Bundle-NativeCode tag of the bundle fragment.
         osName = "windows"; // NON-NLS
       } else if (osName.toLowerCase().startsWith("mac")) {
         osName = "macosx"; // NON-NLS
